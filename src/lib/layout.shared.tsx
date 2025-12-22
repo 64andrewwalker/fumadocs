@@ -9,16 +9,21 @@ interface SiteConfig {
   };
 }
 
-// Load site config
+// Load site config - check multiple possible locations
 function loadSiteConfig(): SiteConfig {
-  const configPath = join(process.cwd(), 'content/docs/site.config.json');
+  const possiblePaths = [
+    join(process.cwd(), 'content/site.config.json'),      // New: content/site.config.json
+    join(process.cwd(), 'content/docs/site.config.json'), // Legacy: content/docs/site.config.json
+  ];
 
-  if (existsSync(configPath)) {
-    try {
-      const content = readFileSync(configPath, 'utf-8');
-      return JSON.parse(content);
-    } catch (e) {
-      console.warn('Failed to parse site.config.json:', e);
+  for (const configPath of possiblePaths) {
+    if (existsSync(configPath)) {
+      try {
+        const content = readFileSync(configPath, 'utf-8');
+        return JSON.parse(content);
+      } catch (e) {
+        console.warn(`Failed to parse ${configPath}:`, e);
+      }
     }
   }
 
