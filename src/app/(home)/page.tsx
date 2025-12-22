@@ -107,8 +107,8 @@ async function renderMdxHomepage(source: string) {
 }
 
 export default async function HomePage() {
-  // Check for custom homepage MDX
-  const homepagePath = join(process.cwd(), 'content/docs/_home.mdx');
+  // Check for custom homepage MDX (in content/, NOT content/docs/ to avoid fumadocs processing)
+  const homepagePath = join(process.cwd(), 'content/_home.mdx');
 
   let source = defaultHomepage;
 
