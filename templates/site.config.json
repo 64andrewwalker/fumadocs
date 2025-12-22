@@ -1,0 +1,53 @@
+{
+    "name": "Calvin",
+    "title": "Calvin Documentation",
+    "description": "Unified prompt/workflow manager for AI coding assistants",
+    "hero": {
+        "title": "Calvin",
+        "subtitle": "Write prompts once, deploy everywhere. Unified prompt/workflow manager for Claude Code, Cursor, VS Code, Antigravity, and Codex.",
+        "cta": {
+            "text": "Get Started",
+            "href": "/docs"
+        },
+        "secondaryCta": {
+            "text": "View API Reference",
+            "href": "/docs/api"
+        }
+    },
+    "features": [
+        {
+            "icon": "🔄",
+            "title": "Write Once, Deploy Everywhere",
+            "description": "Single source of truth for all your AI coding assistant configurations."
+        },
+        {
+            "icon": "🎯",
+            "title": "Platform Adapters",
+            "description": "Automatic conversion to Claude Code, Cursor, VS Code, Antigravity, and Codex formats."
+        },
+        {
+            "icon": "🔒",
+            "title": "Built-in Security",
+            "description": "Audit mode, deny lists, and permission controls to keep your codebase safe."
+        },
+        {
+            "icon": "📦",
+            "title": "Lockfile Tracking",
+            "description": "Track deployed files, detect conflicts, and clean up orphaned configurations."
+        },
+        {
+            "icon": "🐳",
+            "title": "Docker Ready",
+            "description": "Preview documentation locally with a single Docker command."
+        },
+        {
+            "icon": "⚡",
+            "title": "Watch Mode",
+            "description": "Automatic re-deployment when source files change."
+        }
+    ],
+    "links": {
+        "github": "https://github.com/64andrewwalker/calvin",
+        "docs": "/docs"
+    }
+}
