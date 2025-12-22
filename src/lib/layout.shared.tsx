@@ -3,6 +3,11 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import type { ReactNode } from 'react';
 
+interface NavItem {
+  label: string;
+  href: string;
+}
+
 interface SiteConfig {
   name: string;
   logo?: {
@@ -10,6 +15,7 @@ interface SiteConfig {
     imageDark?: string;
     text?: string;
   };
+  nav?: NavItem[];
   social?: {
     github?: string;
   };
@@ -82,18 +88,33 @@ function buildNavTitle(config: SiteConfig): ReactNode {
 export function baseOptions(): BaseLayoutProps {
   const config = loadSiteConfig();
   const githubUrl = config.social?.github || config.links?.github;
+  const basePath = process.env.NEXT_BASE_PATH || '';
+
+  // Build links array from nav config
+  const links: Array<{ text: string; url: string }> = [];
+  
+  // Add custom nav items (like Docs, API, Guides)
+  if (config.nav) {
+    for (const item of config.nav) {
+      links.push({
+        text: item.label,
+        url: item.href.startsWith('/') ? `${basePath}${item.href}` : item.href,
+      });
+    }
+  }
+  
+  // Add GitHub link at the end
+  if (githubUrl) {
+    links.push({
+      text: 'GitHub',
+      url: githubUrl,
+    });
+  }
 
   return {
     nav: {
       title: buildNavTitle(config),
     },
-    links: githubUrl
-      ? [
-        {
-          text: 'GitHub',
-          url: githubUrl,
-        },
-      ]
-      : [],
+    links,
   };
 }
