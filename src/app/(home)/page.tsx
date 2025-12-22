@@ -45,32 +45,58 @@ const customComponents = {
     </section>
   ),
   // Feature card with optional icon or image
-  Feature: ({ icon, image, title, description }: { icon?: string; image?: string; title: string; description: string }) => (
-    <div className="p-6 rounded-xl bg-fd-card border border-fd-border hover:border-fd-primary/50 transition-colors">
-      {image && (
-        <div className="w-full h-40 rounded-lg mb-4 bg-fd-secondary/50 flex items-center justify-center p-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={image.startsWith('/') ? image : `/images/${image}`}
-            alt={title}
-            className="max-w-full max-h-full object-contain"
-          />
-        </div>
-      )}
-      {icon && !image && <div className="text-3xl mb-4">{icon}</div>}
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-fd-muted-foreground">{description}</p>
-    </div>
-  ),
+  Feature: ({ icon, image, title, description }: { icon?: string; image?: string; title: string; description: string }) => {
+    // Get basePath from environment (set during build for GitHub Pages)
+    const basePath = process.env.NEXT_BASE_PATH || '';
+    
+    // Resolve image path with basePath support
+    const getImageSrc = (src: string) => {
+      if (!src) return '';
+      // If already starts with basePath or is an external URL, use as-is
+      if (src.startsWith('http://') || src.startsWith('https://')) return src;
+      // For absolute paths, prepend basePath
+      if (src.startsWith('/')) return `${basePath}${src}`;
+      // For relative paths, assume /images/ prefix
+      return `${basePath}/images/${src}`;
+    };
+    
+    return (
+      <div className="p-6 rounded-xl bg-fd-card border border-fd-border hover:border-fd-primary/50 transition-colors">
+        {image && (
+          <div className="w-full h-40 rounded-lg mb-4 bg-fd-secondary/50 flex items-center justify-center p-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={getImageSrc(image)}
+              alt={title}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+        )}
+        {icon && !image && <div className="text-3xl mb-4">{icon}</div>}
+        <h3 className="text-lg font-semibold mb-2">{title}</h3>
+        <p className="text-fd-muted-foreground">{description}</p>
+      </div>
+    );
+  },
   // Image with automatic path resolution
-  Img: ({ src, alt, className = '' }: { src: string; alt: string; className?: string }) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src.startsWith('/') ? src : `/docs/images/${src}`}
-      alt={alt}
-      className={`max-w-full ${className}`}
-    />
-  ),
+  Img: ({ src, alt, className = '' }: { src: string; alt: string; className?: string }) => {
+    const basePath = process.env.NEXT_BASE_PATH || '';
+    const getImageSrc = (imgSrc: string) => {
+      if (!imgSrc) return '';
+      if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://')) return imgSrc;
+      if (imgSrc.startsWith('/')) return `${basePath}${imgSrc}`;
+      return `${basePath}/docs/images/${imgSrc}`;
+    };
+    
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={getImageSrc(src)}
+        alt={alt}
+        className={`max-w-full ${className}`}
+      />
+    );
+  },
   // Section wrapper
   Section: ({ className = '', children }: { className?: string; children: React.ReactNode }) => (
     <section className={`py-16 px-6 md:px-12 ${className}`}>

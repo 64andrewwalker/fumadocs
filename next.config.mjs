@@ -22,6 +22,11 @@ const config = {
   ...(process.env.NEXT_OUTPUT_MODE === 'export' && {
     images: { unoptimized: true },
   }),
+
+  // Expose NEXT_BASE_PATH to server components during build
+  env: {
+    NEXT_BASE_PATH: process.env.NEXT_BASE_PATH || '',
+  },
 };
 
 export default withMDX(config);
