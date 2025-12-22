@@ -44,10 +44,18 @@ const customComponents = {
       </div>
     </section>
   ),
-  // Feature card
-  Feature: ({ icon, title, description }: { icon?: string; title: string; description: string }) => (
+  // Feature card with optional icon or image
+  Feature: ({ icon, image, title, description }: { icon?: string; image?: string; title: string; description: string }) => (
     <div className="p-6 rounded-xl bg-fd-card border border-fd-border hover:border-fd-primary/50 transition-colors">
-      {icon && <div className="text-3xl mb-4">{icon}</div>}
+      {image && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={image.startsWith('/') ? image : `/images/${image}`}
+          alt={title}
+          className="w-full h-40 object-cover rounded-lg mb-4"
+        />
+      )}
+      {icon && !image && <div className="text-3xl mb-4">{icon}</div>}
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       <p className="text-fd-muted-foreground">{description}</p>
     </div>
