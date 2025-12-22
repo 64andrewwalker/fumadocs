@@ -94,11 +94,13 @@ export function baseOptions(): BaseLayoutProps {
   const links: Array<{ text: string; url: string }> = [];
   
   // Add custom nav items (like Docs, API, Guides)
+  // Note: fumadocs handles basePath internally for internal links,
+  // so we don't need to prepend basePath here
   if (config.nav) {
     for (const item of config.nav) {
       links.push({
         text: item.label,
-        url: item.href.startsWith('/') ? `${basePath}${item.href}` : item.href,
+        url: item.href,
       });
     }
   }
