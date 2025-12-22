@@ -1,45 +1,80 @@
-# pawpaw-docs
+# Fumadocs Engine
 
-This is a Next.js application generated with
-[Create Fumadocs](https://github.com/fuma-nama/fumadocs).
+A reusable documentation engine powered by [Fumadocs](https://fumadocs.dev) and Next.js.
 
-Run development server:
+## Features
+
+- 📚 **Markdown/MDX Support** - Write docs in Markdown or MDX
+- 🐳 **Docker Ready** - Preview docs via Docker container
+- 🔄 **Hot Reload** - Live preview with file watching
+- 🎨 **Beautiful UI** - Powered by Fumadocs UI
+
+## Quick Start
+
+### Local Development
 
 ```bash
-npm run dev
-# or
+pnpm install
 pnpm dev
-# or
-yarn dev
 ```
 
-Open http://localhost:3000 with your browser to see the result.
+Open <http://localhost:3000>
 
-## Explore
+### Docker Preview
 
-In the project, you can see:
+Preview any docs directory:
 
-- `lib/source.ts`: Code for content source adapter, [`loader()`](https://fumadocs.dev/docs/headless/source-api) provides the interface to access your content.
-- `lib/layout.shared.tsx`: Shared options for layouts, optional but preferred to keep.
+```bash
+./preview-docs.sh /path/to/your/docs
+```
 
-| Route                     | Description                                            |
-| ------------------------- | ------------------------------------------------------ |
-| `app/(home)`              | The route group for your landing page and other pages. |
-| `app/docs`                | The documentation layout and pages.                    |
-| `app/api/search/route.ts` | The Route Handler for search.                          |
+### Use with Another Project (e.g., Calvin)
 
-### Fumadocs MDX
+1. Copy `docs-compose.calvin.yml` to your project
+2. Rename to `docs-compose.yml`
+3. Run:
 
-A `source.config.ts` config file has been included, you can customise different options like frontmatter schema.
+```bash
+docker compose -f docs-compose.yml up
+```
 
-Read the [Introduction](https://fumadocs.dev/docs/mdx) for further details.
+## Documentation Format
+
+Each `.md` or `.mdx` file must include YAML frontmatter:
+
+```yaml
+---
+title: Page Title (required)
+description: Page description (required)
+---
+
+# Your content here...
+```
+
+## Project Structure
+
+| Path | Description |
+|------|-------------|
+| `content/docs/` | Documentation content (mount point for external docs) |
+| `src/app/` | Next.js app routes |
+| `Dockerfile` | Multi-stage build (dev & prod targets) |
+| `preview-docs.sh` | Script to preview external docs |
+
+## Docker Images
+
+### Build Development Image
+
+```bash
+docker build -t fumadocs-engine:dev --target dev .
+```
+
+### Build Production Image
+
+```bash
+docker build -t fumadocs-engine:latest --target runner .
+```
 
 ## Learn More
 
-To learn more about Next.js and Fumadocs, take a look at the following
-resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js
-  features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [Fumadocs](https://fumadocs.dev) - learn about Fumadocs
+- [Fumadocs Documentation](https://fumadocs.dev)
+- [Next.js Documentation](https://nextjs.org/docs)

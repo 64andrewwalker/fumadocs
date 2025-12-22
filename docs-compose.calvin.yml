@@ -1,0 +1,29 @@
+# ============================================================
+# Calvin Documentation Preview
+# 
+# Usage:
+#   docker compose -f docs-compose.yml up
+#
+# This will start a live documentation server at http://localhost:3000
+# Any changes to your docs/ directory will be reflected immediately.
+# ============================================================
+
+services:
+  docs:
+    image: ghcr.io/64andrewwalker/fumadocs-engine:latest
+    # If no published image, build from local fumadocs:
+    # build:
+    #   context: ../fumadocs
+    #   dockerfile: Dockerfile
+    #   target: dev
+    container_name: calvin-docs
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount Calvin's docs directory as the content source
+      - ./docs:/app/content/docs:ro
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+    # Uncomment for custom site URL
+    # - NEXT_PUBLIC_SITE_URL=https://64andrewwalker.github.io/calvin

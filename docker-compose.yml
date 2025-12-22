@@ -1,0 +1,46 @@
+# ============================================================
+# Fumadocs Engine - Development Mode
+#
+# This compose file is for the documentation engine itself.
+# For using this with external projects like Calvin, see:
+#   docs-compose.yml (template for external projects)
+# ============================================================
+
+services:
+  # Development mode with hot reload
+  docs-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: fumadocs-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount the content directory for live editing
+      - ./content:/app/content
+      # Mount source for hot reload during engine development
+      - ./src:/app/src
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+    # Use polling for file watching (better for Docker volumes)
+    command: [ "pnpm", "dev" ]
+
+  # Production mode
+  docs-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: fumadocs-prod
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
