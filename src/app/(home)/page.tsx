@@ -73,8 +73,8 @@ const customComponents = {
   ),
   // Section wrapper
   Section: ({ className = '', children }: { className?: string; children: React.ReactNode }) => (
-    <section className={`py-16 px-4 md:px-8 ${className}`}>
-      <div className="max-w-4xl mx-auto [&_pre]:mx-4 [&_pre]:md:mx-8">{children}</div>
+    <section className={`py-16 px-6 md:px-12 ${className}`}>
+      <div className="max-w-4xl mx-auto">{children}</div>
     </section>
   ),
   // Grid layout
