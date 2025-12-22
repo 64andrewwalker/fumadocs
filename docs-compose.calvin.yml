@@ -20,8 +20,8 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # Mount Calvin's docs directory as the content source
-      - ./docs:/app/content/docs:ro
+      # Mount Calvin's docs-site directory as the content source
+      - ./docs-site:/app/content/docs:ro
     environment:
       - NODE_ENV=development
       - WATCHPACK_POLLING=true
