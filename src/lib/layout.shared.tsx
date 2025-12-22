@@ -1,9 +1,19 @@
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import type { ReactNode } from 'react';
 
 interface SiteConfig {
   name: string;
+  logo?: {
+    image?: string;
+    imageDark?: string;
+    text?: string;
+  };
+  social?: {
+    github?: string;
+  };
+  // Legacy format support
   links?: {
     github?: string;
   };
@@ -30,18 +40,58 @@ function loadSiteConfig(): SiteConfig {
   return { name: 'My App' };
 }
 
+// Build nav title with optional logo image (supports light/dark mode)
+function buildNavTitle(config: SiteConfig): ReactNode {
+  const basePath = process.env.NEXT_BASE_PATH || '';
+  
+  if (config.logo?.image) {
+    const imageSrc = config.logo.image.startsWith('/') 
+      ? `${basePath}${config.logo.image}` 
+      : config.logo.image;
+    
+    const imageDarkSrc = config.logo.imageDark 
+      ? (config.logo.imageDark.startsWith('/') 
+          ? `${basePath}${config.logo.imageDark}` 
+          : config.logo.imageDark)
+      : imageSrc;
+    
+    return (
+      <span className="flex items-center gap-2">
+        {/* Light mode logo */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img 
+          src={imageSrc} 
+          alt={config.logo.text || config.name} 
+          className="h-6 w-6 dark:hidden"
+        />
+        {/* Dark mode logo */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img 
+          src={imageDarkSrc} 
+          alt={config.logo.text || config.name} 
+          className="h-6 w-6 hidden dark:block"
+        />
+        <span className="font-semibold">{config.logo.text || config.name}</span>
+      </span>
+    );
+  }
+  
+  return config.logo?.text || config.name;
+}
+
 export function baseOptions(): BaseLayoutProps {
   const config = loadSiteConfig();
+  const githubUrl = config.social?.github || config.links?.github;
 
   return {
     nav: {
-      title: config.name,
+      title: buildNavTitle(config),
     },
-    links: config.links?.github
+    links: githubUrl
       ? [
         {
           text: 'GitHub',
-          url: config.links.github,
+          url: githubUrl,
         },
       ]
       : [],
