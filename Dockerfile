@@ -34,11 +34,15 @@ WORKDIR /app
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy all source files (except content/docs which will be mounted)
+# Copy all source files
 COPY . .
 
 # Remove the docs content - it will be mounted at runtime
 RUN rm -rf /app/content/docs/*
+
+# Copy and setup entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Enable pnpm
 RUN corepack enable pnpm
@@ -46,8 +50,8 @@ RUN corepack enable pnpm
 # Expose port
 EXPOSE 3000
 
-# Development mode with hot reload
-CMD ["pnpm", "dev"]
+# Use entrypoint to regenerate MDX index after volume mount
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # ============================================================
 # Builder stage - for production build
