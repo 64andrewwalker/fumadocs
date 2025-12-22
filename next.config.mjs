@@ -5,8 +5,23 @@ const withMDX = createMDX();
 /** @type {import('next').NextConfig} */
 const config = {
   reactStrictMode: true,
-  // Required for Docker deployment - creates optimized standalone build
-  output: 'standalone',
+
+  // Deployment mode:
+  // - 'standalone': For Docker deployment (default)
+  // - 'export': For GitHub Pages (static HTML)
+  output: process.env.NEXT_OUTPUT_MODE || 'standalone',
+
+  // Base path for GitHub Pages (e.g., /calvin for github.io/calvin)
+  // Only set when deploying to GitHub Pages
+  ...(process.env.NEXT_BASE_PATH && {
+    basePath: process.env.NEXT_BASE_PATH,
+    assetPrefix: process.env.NEXT_BASE_PATH,
+  }),
+
+  // Disable image optimization for static export (GitHub Pages)
+  ...(process.env.NEXT_OUTPUT_MODE === 'export' && {
+    images: { unoptimized: true },
+  }),
 };
 
 export default withMDX(config);
