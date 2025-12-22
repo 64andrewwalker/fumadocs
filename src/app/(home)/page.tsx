@@ -48,12 +48,14 @@ const customComponents = {
   Feature: ({ icon, image, title, description }: { icon?: string; image?: string; title: string; description: string }) => (
     <div className="p-6 rounded-xl bg-fd-card border border-fd-border hover:border-fd-primary/50 transition-colors">
       {image && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={image.startsWith('/') ? image : `/images/${image}`}
-          alt={title}
-          className="w-full h-40 object-cover rounded-lg mb-4"
-        />
+        <div className="w-full h-40 rounded-lg mb-4 bg-fd-secondary/50 flex items-center justify-center p-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={image.startsWith('/') ? image : `/images/${image}`}
+            alt={title}
+            className="max-w-full max-h-full object-contain"
+          />
+        </div>
       )}
       {icon && !image && <div className="text-3xl mb-4">{icon}</div>}
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
@@ -71,8 +73,8 @@ const customComponents = {
   ),
   // Section wrapper
   Section: ({ className = '', children }: { className?: string; children: React.ReactNode }) => (
-    <section className={`py-16 px-4 ${className}`}>
-      <div className="max-w-6xl mx-auto">{children}</div>
+    <section className={`py-16 px-4 md:px-8 ${className}`}>
+      <div className="max-w-4xl mx-auto [&_pre]:mx-4 [&_pre]:md:mx-8">{children}</div>
     </section>
   ),
   // Grid layout
