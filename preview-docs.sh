@@ -8,15 +8,18 @@
 # The content directory should have this structure:
 #   content/
 #   ├── _home.mdx      (optional: custom homepage)
-#   ├── site.config.json (optional: site configuration)
 #   └── docs/          (required: documentation)
 #       ├── index.mdx
 #       └── ...
 #
+# Or legacy structure (just docs):
+#   docs-site/
+#   ├── index.mdx
+#   └── ...
+#
 # Examples:
 #   ./preview-docs.sh ../calvin/docs-content      # Full content dir
 #   ./preview-docs.sh ../calvin/docs-site         # Just docs (legacy)
-#   ./preview-docs.sh ./content 3001              # Force specific port
 # ============================================================
 
 set -e
@@ -43,21 +46,19 @@ if [ ! -d "$CONTENT_PATH" ]; then
 fi
 
 # Determine mount strategy based on directory structure
-DOCS_PATH=""
-HOME_PATH=""
-
 if [ -d "$CONTENT_PATH/docs" ]; then
     # New structure: content/_home.mdx + content/docs/
+    MOUNT_MODE="full"
     DOCS_PATH="$CONTENT_PATH/docs"
+    HAS_HOME="no"
     if [ -f "$CONTENT_PATH/_home.mdx" ]; then
-        HOME_PATH="$CONTENT_PATH/_home.mdx"
-    fi
-    if [ -f "$CONTENT_PATH/site.config.json" ]; then
-        SITE_CONFIG_PATH="$CONTENT_PATH/site.config.json"
+        HAS_HOME="yes"
     fi
 else
-    # Legacy: just docs directory (docs-site/)
+    # Legacy: just docs directory
+    MOUNT_MODE="legacy"
     DOCS_PATH="$CONTENT_PATH"
+    HAS_HOME="no"
 fi
 
 # Function to check if port is available
@@ -95,8 +96,8 @@ echo "📚 Fumadocs Engine"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "📂 Content:   $CONTENT_PATH"
 echo "📄 Docs:      $DOCS_PATH"
-if [ -n "$HOME_PATH" ]; then
-    echo "🏠 Homepage:  $HOME_PATH"
+if [ "$HAS_HOME" = "yes" ]; then
+    echo "🏠 Homepage:  $CONTENT_PATH/_home.mdx"
 fi
 echo "🌐 Server:    http://localhost:$PORT"
 if [ "$PORT" != "$PREFERRED_PORT" ]; then
@@ -105,21 +106,12 @@ fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Build volume mounts
-VOLUME_MOUNTS="- ${DOCS_PATH}:/app/content/docs:ro"
-if [ -n "$HOME_PATH" ]; then
-    VOLUME_MOUNTS="$VOLUME_MOUNTS
-      - ${HOME_PATH}:/app/content/_home.mdx:ro"
-fi
-if [ -n "$SITE_CONFIG_PATH" ]; then
-    VOLUME_MOUNTS="$VOLUME_MOUNTS
-      - ${SITE_CONFIG_PATH}:/app/content/docs/site.config.json:ro"
-fi
-
-# Run the container
+# Run the container with appropriate mounts
 cd "$SCRIPT_DIR"
 
-docker compose -f - up --build <<EOF
+if [ "$MOUNT_MODE" = "full" ]; then
+    # Mount entire content directory
+    docker compose -f - up --build <<EOF
 services:
   docs:
     build:
@@ -130,9 +122,29 @@ services:
     ports:
       - "${PORT}:3000"
     volumes:
-      ${VOLUME_MOUNTS}
+      - ${CONTENT_PATH}:/app/content:ro
       - ./src:/app/src:ro
     environment:
       - NODE_ENV=development
       - WATCHPACK_POLLING=true
 EOF
+else
+    # Legacy: mount docs only
+    docker compose -f - up --build <<EOF
+services:
+  docs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: fumadocs-preview
+    ports:
+      - "${PORT}:3000"
+    volumes:
+      - ${DOCS_PATH}:/app/content/docs:ro
+      - ./src:/app/src:ro
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+EOF
+fi
