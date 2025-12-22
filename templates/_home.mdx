@@ -1,0 +1,126 @@
+{/*
+  Calvin Homepage Template
+  
+  This is a custom MDX homepage with full control over layout and styling.
+  Available components:
+  
+  - <Hero title="..." subtitle="...">...</Hero> - Hero section with gradient background
+  - <Button href="..." variant="primary|secondary|outline">...</Button> - Styled button
+  - <Features>...</Features> - Grid container for Feature cards
+  - <Feature icon="🔄" title="..." description="..." /> - Feature card
+  - <Section className="...">...</Section> - Generic section wrapper
+  - <Grid cols={3}>...</Grid> - Responsive grid layout
+  - <Center>...</Center> - Center content
+  - <Img src="..." alt="..." /> - Image (auto-resolves paths from images/)
+  - <GitHubButton href="..." /> - GitHub button with icon
+  
+  Plus all standard MDX/Markdown and Fumadocs components:
+  - <Callout type="info|warning|error">...</Callout>
+  - <Cards><Card title="..." href="..." /></Cards>
+  - <Steps>...</Steps>
+  - <Tabs>...</Tabs>
+  
+  Images: Place images in docs-site/images/ and reference as:
+    <Img src="logo.png" alt="Logo" />
+    or with full path: <Img src="/images/hero.png" alt="Hero" />
+*/}
+
+<Hero 
+  title="Calvin" 
+  subtitle="Write prompts once, deploy everywhere. Unified prompt/workflow manager for Claude Code, Cursor, VS Code, Antigravity, and Codex."
+>
+  <Button href="/docs" variant="primary">Get Started</Button>
+  <Button href="/docs/api" variant="outline">API Reference</Button>
+  <GitHubButton href="https://github.com/64andrewwalker/calvin" />
+</Hero>
+
+<Section className="bg-fd-secondary/30">
+  <Center>
+    <h2 className="text-3xl font-bold mb-4">Why Calvin?</h2>
+    <p className="text-fd-muted-foreground max-w-2xl mb-12">
+      Managing prompts and workflows across multiple AI coding assistants is painful. 
+      Calvin provides a single source of truth with automatic deployment to all platforms.
+    </p>
+  </Center>
+</Section>
+
+<Features>
+  <Feature 
+    icon="🔄" 
+    title="Write Once, Deploy Everywhere" 
+    description="Single source of truth for all your AI coding assistant configurations. No more copy-pasting between tools."
+  />
+  <Feature 
+    icon="🎯" 
+    title="Platform Adapters" 
+    description="Automatic conversion to Claude Code, Cursor, VS Code (Copilot), Antigravity, and Codex formats."
+  />
+  <Feature 
+    icon="🔒" 
+    title="Built-in Security" 
+    description="Audit mode, deny lists, and permission controls to keep your codebase safe from AI mishaps."
+  />
+  <Feature 
+    icon="📦" 
+    title="Lockfile Tracking" 
+    description="Track deployed files, detect conflicts, and clean up orphaned configurations automatically."
+  />
+  <Feature 
+    icon="👀" 
+    title="Watch Mode" 
+    description="Automatic re-deployment when source files change. Perfect for iterating on prompts."
+  />
+  <Feature 
+    icon="🐳" 
+    title="Docker Ready" 
+    description="Preview documentation locally with a single Docker command. Zero setup required."
+  />
+</Features>
+
+<Section>
+  <Center>
+    <h2 className="text-3xl font-bold mb-4">Quick Start</h2>
+    <p className="text-fd-muted-foreground max-w-2xl mb-8">
+      Get up and running in under a minute.
+    </p>
+  </Center>
+  
+  ```bash
+  # Install Calvin
+  cargo install calvin
+  
+  # Initialize in your project
+  calvin init
+  
+  # Deploy to all platforms
+  calvin deploy
+  ```
+</Section>
+
+<Section className="bg-gradient-to-b from-fd-secondary/20 to-fd-background">
+  <Center>
+    <h2 className="text-3xl font-bold mb-4">Supported Platforms</h2>
+    <Grid cols={5}>
+      <div className="text-center p-4">
+        <div className="text-4xl mb-2">🟣</div>
+        <div className="font-medium">Claude Code</div>
+      </div>
+      <div className="text-center p-4">
+        <div className="text-4xl mb-2">🔵</div>
+        <div className="font-medium">Cursor</div>
+      </div>
+      <div className="text-center p-4">
+        <div className="text-4xl mb-2">💙</div>
+        <div className="font-medium">VS Code</div>
+      </div>
+      <div className="text-center p-4">
+        <div className="text-4xl mb-2">🟢</div>
+        <div className="font-medium">Antigravity</div>
+      </div>
+      <div className="text-center p-4">
+        <div className="text-4xl mb-2">⚫</div>
+        <div className="font-medium">Codex</div>
+      </div>
+    </Grid>
+  </Center>
+</Section>
