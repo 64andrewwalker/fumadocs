@@ -4,9 +4,10 @@
  * TDD test cases for the Fumadocs compatibility layer
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, bench } from 'vitest';
 import { createCompatSource } from '../index';
 import path from 'path';
+import fs from 'fs/promises';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 
@@ -989,6 +990,78 @@ describe('Blockquotes and Callouts', () => {
 });
 
 // =============================================================================
+// TC: Code Highlighting
+// =============================================================================
+describe('Code Highlighting', () => {
+  it('should preserve JavaScript code blocks with syntax', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['code-highlighting']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('```javascript');
+    expect(page?.content).toContain('function greet');
+  });
+
+  it('should preserve TypeScript code blocks', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['code-highlighting']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('```typescript');
+    expect(page?.content).toContain('interface User');
+  });
+
+  it('should preserve Python code blocks', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['code-highlighting']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('```python');
+    expect(page?.content).toContain('def fibonacci');
+  });
+
+  it('should preserve Rust code blocks', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['code-highlighting']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('```rust');
+    expect(page?.content).toContain('fn main()');
+  });
+
+  it('should preserve SQL code blocks', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['code-highlighting']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('```sql');
+    expect(page?.content).toContain('SELECT');
+  });
+
+  it('should preserve multiple language code blocks in same file', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['code-highlighting']);
+    expect(page).toBeDefined();
+    // Count code blocks
+    const codeBlockCount = (page?.content.match(/```\w+/g) || []).length;
+    expect(codeBlockCount).toBeGreaterThanOrEqual(10);
+  });
+});
+
+// =============================================================================
 // TC: Links and Images
 // =============================================================================
 describe('Links and Images', () => {
@@ -1052,6 +1125,91 @@ describe('Links and Images', () => {
     expect(page).toBeDefined();
     expect(page?.content).toContain('mailto:test@example.com');
     expect(page?.content).toContain('tel:+1234567890');
+  });
+});
+
+// =============================================================================
+// TC: Performance Benchmarks
+// =============================================================================
+describe('Performance', () => {
+  it('should process edge-cases directory in reasonable time', async () => {
+    const startTime = performance.now();
+    
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+    
+    // Should complete in under 500ms for edge-cases directory
+    expect(duration).toBeLessThan(500);
+    expect(source.getPages().length).toBeGreaterThan(0);
+  });
+
+  it('should process nested directories efficiently', async () => {
+    const startTime = performance.now();
+    
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'deep-nested'),
+      baseUrl: '/test',
+    });
+    
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+    
+    // Should complete in under 200ms for nested directory
+    expect(duration).toBeLessThan(200);
+  });
+
+  it('should generate params quickly', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    
+    const startTime = performance.now();
+    const params = source.generateParams();
+    const endTime = performance.now();
+    
+    // Param generation should be nearly instant
+    expect(endTime - startTime).toBeLessThan(10);
+    expect(params.length).toBeGreaterThan(0);
+  });
+
+  it('should build page tree quickly', async () => {
+    const startTime = performance.now();
+    
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-nested'),
+      baseUrl: '/test',
+    });
+    
+    // Page tree is built during source creation
+    expect(source.pageTree).toBeDefined();
+    
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+    
+    // Should complete in under 100ms
+    expect(duration).toBeLessThan(100);
+  });
+
+  it('should handle empty directory without delay', async () => {
+    const startTime = performance.now();
+    
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'empty-dir'),
+      baseUrl: '/test',
+    });
+    
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+    
+    // Empty directory should be instant
+    expect(duration).toBeLessThan(50);
+    expect(source.getPages()).toHaveLength(0);
   });
 });
 
