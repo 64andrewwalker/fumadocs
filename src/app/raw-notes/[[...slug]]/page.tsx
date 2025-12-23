@@ -16,6 +16,11 @@ import { notFound } from 'next/navigation';
 import { getMDXComponents } from '@/mdx-components';
 import type { Metadata } from 'next';
 
+// Remark/Rehype plugins for enhanced markdown support
+import remarkMath from 'remark-math';
+import remarkGfm from 'remark-gfm';
+import rehypeKatex from 'rehype-katex';
+
 interface PageProps {
   params: Promise<{ slug?: string[] }>;
 }
@@ -51,9 +56,13 @@ export default async function Page({ params }: PageProps) {
   if (!page) notFound();
 
   // 使用 mdx-remote 编译 markdown 内容
+  // 添加 remark/rehype 插件支持数学公式、GFM（表格、任务列表等）
   const compiled = await compileMDX({
     source: page.content,
-    // 可以添加自定义 remark/rehype 插件
+    mdxOptions: {
+      remarkPlugins: [remarkGfm, remarkMath],
+      rehypePlugins: [rehypeKatex],
+    },
   });
 
   const MDXContent = compiled.body;

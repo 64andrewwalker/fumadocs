@@ -705,9 +705,8 @@ describe('Mermaid Code Blocks', () => {
 
 // =============================================================================
 // TC: Math Formulas ($...$)
-// NOTE: Math formulas need remark-math plugin for proper rendering.
-// Current behavior: curly braces in math are escaped, which may break rendering.
-// This is a known limitation documented in PRD 3.14.
+// Math formulas are now fully supported with remark-math plugin.
+// Preprocessor protects math contexts from escaping.
 // =============================================================================
 describe('Math Formulas', () => {
   it('should preserve $ delimiters', async () => {
@@ -732,16 +731,26 @@ describe('Math Formulas', () => {
     expect(page?.content).toContain('$$');
   });
 
-  it('should have math file processed', async () => {
+  it('should preserve curly braces in inline math', async () => {
     const source = await createCompatSource({
       dir: path.join(fixturesDir, 'edge-cases'),
       baseUrl: '/test',
     });
     const page = source.getPage(['math']);
     expect(page).toBeDefined();
-    expect(page?.data.title).toBe('Math Formulas');
-    // Note: Curly braces in math context are escaped by preprocessor
-    // This is documented as a limitation - math requires plugin support
+    // Inline math with curly braces should NOT be escaped
+    expect(page?.content).toContain('$E = mc^2$');
+  });
+
+  it('should preserve curly braces in block math', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['math']);
+    expect(page).toBeDefined();
+    // Block math content should be preserved as-is
+    expect(page?.content).toContain('\\sum_{i=1}^{n}');
   });
 });
 

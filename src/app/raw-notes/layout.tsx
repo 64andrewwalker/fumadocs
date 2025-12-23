@@ -9,6 +9,9 @@ import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 import { baseOptions } from '@/lib/layout.shared';
 import type { ReactNode } from 'react';
 
+// KaTeX CSS for math formula rendering
+import 'katex/dist/katex.min.css';
+
 export default async function Layout({ children }: { children: ReactNode }) {
   const source = await getRawSource();
 

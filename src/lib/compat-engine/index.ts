@@ -111,6 +111,7 @@ function preprocessMarkdown(content: string): string {
   const result: string[] = [];
   let inCodeBlock = false;
   let inTable = false;
+  let inBlockMath = false;
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
@@ -124,6 +125,19 @@ function preprocessMarkdown(content: string): string {
 
     // 在代码块中不做处理（代码块内容由 MDX 特殊处理）
     if (inCodeBlock) {
+      result.push(line);
+      continue;
+    }
+
+    // 检测块级数学公式 $$ 边界
+    if (line.trim() === '$$') {
+      inBlockMath = !inBlockMath;
+      result.push(line);
+      continue;
+    }
+
+    // 在块级数学公式中不做处理
+    if (inBlockMath) {
       result.push(line);
       continue;
     }
@@ -177,13 +191,27 @@ function escapeJsxInText(text: string): string {
 
 /**
  * 在非代码文本中转义单独的 < > { } 字符
+ * 保护内联代码和数学公式
  */
 function escapeJsxInNonCodeText(text: string): string {
   // 保护内联代码
-  const codeSegments: string[] = [];
+  const protectedSegments: string[] = [];
   let processed = text.replace(/`[^`]+`/g, (match) => {
-    codeSegments.push(match);
-    return `__CODE_SEGMENT_${codeSegments.length - 1}__`;
+    protectedSegments.push(match);
+    return `__PROTECTED_${protectedSegments.length - 1}__`;
+  });
+
+  // 保护内联数学公式 $...$（但不是 $$）
+  // 匹配 $...$ 但不匹配 $$...$$
+  processed = processed.replace(/(?<!\$)\$(?!\$)([^$]+)\$(?!\$)/g, (match) => {
+    protectedSegments.push(match);
+    return `__PROTECTED_${protectedSegments.length - 1}__`;
+  });
+
+  // 保护块级数学公式 $$...$$（可能跨行，但在单行模式下只处理同一行的）
+  processed = processed.replace(/\$\$([^$]*)\$\$/g, (match) => {
+    protectedSegments.push(match);
+    return `__PROTECTED_${protectedSegments.length - 1}__`;
   });
 
   // 只转义明显不是 HTML/JSX 标签的 < 和 {
@@ -195,9 +223,9 @@ function escapeJsxInNonCodeText(text: string): string {
   processed = processed.replace(/{(?![a-zA-Z_$])/g, '\\{');
   processed = processed.replace(/(?<![a-zA-Z0-9_$])}/g, '\\}');
 
-  // 恢复内联代码
-  codeSegments.forEach((segment, index) => {
-    processed = processed.replace(`__CODE_SEGMENT_${index}__`, segment);
+  // 恢复保护的内容
+  protectedSegments.forEach((segment, index) => {
+    processed = processed.replace(`__PROTECTED_${index}__`, segment);
   });
 
   return processed;
