@@ -701,6 +701,38 @@ describe('Mermaid Code Blocks', () => {
     expect(page?.content).toContain('-->');
     expect(page?.content).toContain('A->>B');
   });
+
+  it('should preserve flowchart syntax', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['mermaid']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('A[Start]');
+    expect(page?.content).toContain('B{Decision}');
+  });
+
+  it('should preserve sequence diagram syntax', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['mermaid']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('sequenceDiagram');
+    expect(page?.content).toContain('participant');
+  });
+
+  it('should preserve class diagram syntax', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['mermaid']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('classDiagram');
+  });
 });
 
 // =============================================================================
