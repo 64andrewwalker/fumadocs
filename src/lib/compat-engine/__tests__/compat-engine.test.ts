@@ -820,3 +820,42 @@ describe('BOM File Handling', () => {
   });
 });
 
+// =============================================================================
+// TC: Footnotes Support (via remark-gfm or remark-footnotes)
+// =============================================================================
+describe('Footnotes Support', () => {
+  it('should preserve footnote syntax', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['footnotes']);
+    expect(page).toBeDefined();
+    // Footnote reference should be preserved
+    expect(page?.content).toContain('[^1]');
+    expect(page?.content).toContain('[^2]');
+  });
+
+  it('should preserve footnote definitions', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['footnotes']);
+    expect(page).toBeDefined();
+    // Footnote definitions should be preserved
+    expect(page?.content).toContain('[^1]:');
+    expect(page?.content).toContain('This is the first footnote');
+  });
+
+  it('should preserve named footnotes', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['footnotes']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('[^note]');
+  });
+});
+
