@@ -645,3 +645,169 @@ describe('Content Completeness', () => {
   });
 });
 
+// =============================================================================
+// TC: Deep Nested Directories (>5 levels)
+// =============================================================================
+describe('Deep Nested Directories', () => {
+  it('should handle 5+ levels of nesting', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'deep-nested'),
+      baseUrl: '/deep',
+    });
+    const page = source.getPage(['a', 'b', 'c', 'd', 'e', 'deep-file']);
+    expect(page).toBeDefined();
+    expect(page?.url).toBe('/deep/a/b/c/d/e/deep-file');
+  });
+
+  it('should build correct page tree for deep nesting', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'deep-nested'),
+      baseUrl: '/deep',
+    });
+    // Should have nested folder structure
+    expect(source.pageTree.children.length).toBeGreaterThan(0);
+    
+    // First level should be 'a' folder
+    const aFolder = source.pageTree.children.find(
+      c => c.type === 'folder' && c.name === 'A'
+    );
+    expect(aFolder).toBeDefined();
+  });
+});
+
+// =============================================================================
+// TC: Mermaid Code Blocks
+// =============================================================================
+describe('Mermaid Code Blocks', () => {
+  it('should preserve mermaid code blocks', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['mermaid']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('```mermaid');
+    expect(page?.content).toContain('graph TD');
+  });
+
+  it('should not escape content inside mermaid blocks', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['mermaid']);
+    expect(page).toBeDefined();
+    // Arrow syntax should be preserved
+    expect(page?.content).toContain('-->');
+    expect(page?.content).toContain('A->>B');
+  });
+});
+
+// =============================================================================
+// TC: Math Formulas ($...$)
+// NOTE: Math formulas need remark-math plugin for proper rendering.
+// Current behavior: curly braces in math are escaped, which may break rendering.
+// This is a known limitation documented in PRD 3.14.
+// =============================================================================
+describe('Math Formulas', () => {
+  it('should preserve $ delimiters', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['math']);
+    expect(page).toBeDefined();
+    // $ delimiters should be preserved
+    expect(page?.content).toContain('$E = mc^2$');
+  });
+
+  it('should preserve block math notation with $$', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['math']);
+    expect(page).toBeDefined();
+    // Should preserve $$ delimiters
+    expect(page?.content).toContain('$$');
+  });
+
+  it('should have math file processed', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['math']);
+    expect(page).toBeDefined();
+    expect(page?.data.title).toBe('Math Formulas');
+    // Note: Curly braces in math context are escaped by preprocessor
+    // This is documented as a limitation - math requires plugin support
+  });
+});
+
+// =============================================================================
+// TC: Chinese Filename Handling
+// =============================================================================
+describe('Chinese Filename Handling', () => {
+  it('should process files with Chinese names', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const pages = source.getPages();
+    // Should find a page from the Chinese filename
+    const chinesePage = pages.find(p => p.filePath.includes('中文文件'));
+    expect(chinesePage).toBeDefined();
+  });
+
+  it('should generate URL-safe slug for Chinese filenames', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const pages = source.getPages();
+    const chinesePage = pages.find(p => p.filePath.includes('中文文件'));
+    expect(chinesePage).toBeDefined();
+    // Slug should be URL-safe (no Chinese characters in URL)
+    expect(chinesePage?.url).not.toMatch(/[\u4e00-\u9fa5]/);
+  });
+
+  it('should extract Chinese title correctly', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const pages = source.getPages();
+    const chinesePage = pages.find(p => p.filePath.includes('中文文件'));
+    expect(chinesePage).toBeDefined();
+    expect(chinesePage?.data.title).toBe('中文标题');
+  });
+});
+
+// =============================================================================
+// TC: BOM File Handling
+// =============================================================================
+describe('BOM File Handling', () => {
+  it('should handle files with UTF-8 BOM', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['with-bom']);
+    expect(page).toBeDefined();
+    // Title should be extracted correctly despite BOM
+    expect(page?.data.title).toBe('File With BOM');
+  });
+
+  it('should not include BOM in content', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['with-bom']);
+    expect(page).toBeDefined();
+    // Content should not start with BOM character
+    expect(page?.content.charCodeAt(0)).not.toBe(0xFEFF);
+  });
+});
+
