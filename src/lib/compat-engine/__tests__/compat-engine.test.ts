@@ -378,3 +378,270 @@ describe('P3-2: Folder Hierarchy', () => {
   });
 });
 
+// =============================================================================
+// TC-07/08: Frontmatter Parsing and Error Tolerance
+// =============================================================================
+describe('TC-07/08: Frontmatter Handling', () => {
+  it('should handle invalid frontmatter gracefully', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['invalid-frontmatter']);
+    // Should not throw, should fallback to extracting title from h1
+    expect(page).toBeDefined();
+    expect(page?.data.title).toBe('Fallback Title');
+  });
+});
+
+// =============================================================================
+// TC-09: Hidden Files (.xxx)
+// =============================================================================
+describe('TC-09: Hidden File Handling', () => {
+  it('should ignore files starting with dot', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+      ignore: ['_*', '.*'],
+    });
+    const pages = source.getPages();
+    const hiddenPage = pages.find(p => p.filePath.includes('.hidden'));
+    expect(hiddenPage).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// TC-10: Draft Files (_xxx)
+// =============================================================================
+describe('TC-10: Draft File Handling', () => {
+  it('should ignore files starting with underscore', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+      ignore: ['_*', '.*'],
+    });
+    const pages = source.getPages();
+    const draftPage = pages.find(p => p.filePath.includes('_draft'));
+    expect(draftPage).toBeUndefined();
+  });
+
+  it('should still include visible files', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+      ignore: ['_*', '.*'],
+    });
+    const pages = source.getPages();
+    const visiblePage = pages.find(p => p.filePath.includes('visible-file'));
+    expect(visiblePage).toBeDefined();
+  });
+});
+
+// =============================================================================
+// TC-12: No Title File
+// =============================================================================
+describe('TC-12b: No Title Fallback', () => {
+  it('should use filename as title when no h1 exists', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['no-title']);
+    expect(page).toBeDefined();
+    // Should convert filename to title: no-title -> No Title
+    expect(page?.data.title).toBe('No Title');
+  });
+});
+
+// =============================================================================
+// TC-16/17: Code Block and Inline Code Protection
+// =============================================================================
+describe('TC-16/17: Code Protection', () => {
+  it('should preserve JSX inside code blocks', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['code-blocks']);
+    expect(page).toBeDefined();
+    // Code block content should be preserved as-is
+    expect(page?.content).toContain('```jsx');
+    expect(page?.content).toContain('<Component prop={value} />');
+  });
+
+  it('should preserve special chars in fenced code blocks', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['code-blocks']);
+    expect(page).toBeDefined();
+    // Bash code block should be preserved
+    expect(page?.content).toContain('if [ $x < 10 ]');
+  });
+});
+
+// =============================================================================
+// TC: Extension Filtering
+// =============================================================================
+describe('Extension Filtering', () => {
+  it('should only include markdown files', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const pages = source.getPages();
+    // All pages should have .md or .mdx extension
+    pages.forEach(page => {
+      expect(page.filePath).toMatch(/\.(md|mdx)$/);
+    });
+  });
+});
+
+// =============================================================================
+// TC: Page URL Generation
+// =============================================================================
+describe('Page URL Generation', () => {
+  it('should generate correct base URL', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-readme'),
+      baseUrl: '/custom-base',
+    });
+    const page = source.getPage(['other-doc']);
+    expect(page?.url).toBe('/custom-base/other-doc');
+  });
+
+  it('should handle root index correctly', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-readme'),
+      baseUrl: '/docs',
+    });
+    const indexPage = source.getPage([]);
+    expect(indexPage?.url).toBe('/docs');
+  });
+});
+
+// =============================================================================
+// TC: Valid Frontmatter Handling
+// =============================================================================
+describe('Valid Frontmatter Handling', () => {
+  it('should use title from frontmatter', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['frontmatter-valid']);
+    expect(page).toBeDefined();
+    expect(page?.data.title).toBe('Custom Title');
+  });
+
+  it('should use description from frontmatter', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['frontmatter-valid']);
+    expect(page).toBeDefined();
+    expect(page?.data.description).toBe('This is a custom description from frontmatter.');
+  });
+
+  it('should preserve additional frontmatter fields', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['frontmatter-valid']);
+    expect(page).toBeDefined();
+    expect(page?.data.frontmatter.author).toBe('Test Author');
+  });
+});
+
+// =============================================================================
+// TC-13: HTML Tags Preservation
+// =============================================================================
+describe('TC-13: HTML Tags', () => {
+  it('should preserve valid HTML tags', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['html-tags']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('<div class="container">');
+    expect(page?.content).toContain('<strong>');
+    expect(page?.content).toContain('</strong>');
+    expect(page?.content).toContain('<details>');
+    expect(page?.content).toContain('<br/>');
+  });
+});
+
+// =============================================================================
+// TC-16: Task Lists
+// =============================================================================
+describe('TC-16: Task Lists', () => {
+  it('should preserve task list syntax', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['task-list']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('- [x] Buy milk');
+    expect(page?.content).toContain('- [ ] Buy eggs');
+    expect(page?.content).toContain('- [x] Write tests');
+    expect(page?.content).toContain('- [ ] Implement feature');
+  });
+});
+
+// =============================================================================
+// TC: Warnings Collection
+// =============================================================================
+describe('Warnings Collection', () => {
+  it('should have warnings array available', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    // Warnings array should exist
+    expect(Array.isArray(source.warnings)).toBe(true);
+  });
+
+  it('should process file with broken frontmatter gracefully', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    // The file with invalid frontmatter should still be processed
+    const page = source.getPage(['invalid-frontmatter']);
+    expect(page).toBeDefined();
+    // It should have been processed (either with fallback title or frontmatter title)
+    expect(page?.data.title).toBeDefined();
+    expect(page?.data.title.length).toBeGreaterThan(0);
+  });
+});
+
+// =============================================================================
+// TC: Content Completeness
+// =============================================================================
+describe('Content Completeness', () => {
+  it('should include all expected files from edge-cases', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+      ignore: ['_*', '.*'],
+    });
+    const pages = source.getPages();
+    // Should have: visible-file, no-title, code-blocks, invalid-frontmatter, 
+    // with-bom, html-tags, task-list, frontmatter-valid
+    // Should NOT have: .hidden-file, _draft-file
+    expect(pages.length).toBeGreaterThanOrEqual(7);
+    
+    // Check specific files exist
+    const filePaths = pages.map(p => path.basename(p.filePath));
+    expect(filePaths).toContain('visible-file.md');
+    expect(filePaths).toContain('code-blocks.md');
+    expect(filePaths).not.toContain('.hidden-file.md');
+    expect(filePaths).not.toContain('_draft-file.md');
+  });
+});
+

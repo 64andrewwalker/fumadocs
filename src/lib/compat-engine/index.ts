@@ -425,7 +425,24 @@ export async function createCompatSource(options: CompatSourceOptions) {
     }
 
     const content = await fs.readFile(filePath, 'utf-8');
-    const { data: frontmatter, content: rawContent } = matter(content);
+    
+    // 解析 frontmatter，如果解析失败则回退到空 frontmatter
+    let frontmatter: Record<string, unknown> = {};
+    let rawContent: string = content;
+    
+    try {
+      const parsed = matter(content);
+      frontmatter = parsed.data;
+      rawContent = parsed.content;
+    } catch (error) {
+      // Frontmatter 解析失败，使用原始内容
+      warnings.push(`Invalid frontmatter in ${file}: ${error instanceof Error ? error.message : 'Unknown error'}. Using content as-is.`);
+      // 尝试移除无效的 frontmatter 块
+      const match = content.match(/^---[\s\S]*?---\n?([\s\S]*)$/);
+      if (match) {
+        rawContent = match[1] || content;
+      }
+    }
 
     const slugs = filePathToSlugs(file);
     const slugKey = slugs.join('/') || 'index';
