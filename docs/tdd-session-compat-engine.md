@@ -41,10 +41,10 @@
 
 ## Test Summary
 
-**总测试数**: 63  
-**通过**: 63  
+**总测试数**: 77  
+**通过**: 77  
 **失败**: 0  
-**覆盖率**: 完整覆盖 P0、P1、P2、P3 功能 + 扩展边缘情况 + 完整插件支持
+**覆盖率**: 完整覆盖 P0、P1、P2、P3 功能 + 扩展边缘情况 + 完整插件支持 + GFM 扩展
 
 ### 边缘情况测试 (v1.4)
 | 测试 | 描述 | 状态 |
@@ -64,6 +64,14 @@
 | BOM Files | 正确处理 UTF-8 BOM | ✅ |
 | Math Curly Braces | 块级数学公式中花括号不被转义 | ✅ |
 | Footnotes | 脚注语法 `[^1]` 和定义 | ✅ |
+| Strikethrough | GFM 删除线 `~~text~~` | ✅ |
+| Autolinks | 自动链接 URL 和邮箱 | ✅ |
+| Table Alignment | 表格对齐语法 `:---:` | ✅ |
+| Blockquotes | 标准和嵌套引用块 | ✅ |
+| GitHub Callouts | `[!NOTE]` 等 callout 语法 | ✅ |
+| Reference Links | 引用式链接 `[text][ref]` | ✅ |
+| Anchor Links | 锚点链接 `#section` | ✅ |
+| Mailto/Tel Links | 邮件和电话链接 | ✅ |
 
 ### 已启用插件
 | 插件 | 功能 |
