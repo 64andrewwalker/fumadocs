@@ -41,10 +41,22 @@
 
 ## Test Summary
 
-**总测试数**: 29  
-**通过**: 29  
+**总测试数**: 47  
+**通过**: 47  
 **失败**: 0  
-**覆盖率**: 完整覆盖 P1、P2、P3 功能
+**覆盖率**: 完整覆盖 P0、P1、P2、P3 功能
+
+### 新增边缘情况测试 (v1.2)
+| 测试 | 描述 |
+| --- | --- |
+| Valid Frontmatter | 正确解析 frontmatter 中的 title/description |
+| Invalid Frontmatter | 容错处理无效 YAML |
+| Hidden Files | 忽略 `.xxx` 文件 |
+| Draft Files | 忽略 `_xxx` 文件 |
+| No Title | 无标题时使用文件名 |
+| HTML Tags | 保留标准 HTML 标签 |
+| Task Lists | 保留任务列表语法 |
+| Code Blocks | 保护代码块内容不被转义 |
 
 ## Test File Structure
 
