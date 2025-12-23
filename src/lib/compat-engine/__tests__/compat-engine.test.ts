@@ -1129,6 +1129,48 @@ describe('Links and Images', () => {
 });
 
 // =============================================================================
+// TC: Custom Ignore Patterns
+// =============================================================================
+describe('Custom Ignore Patterns', () => {
+  it('should use default ignore patterns (_* and .*)', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const pages = source.getPages();
+    const filePaths = pages.map(p => path.basename(p.filePath));
+    expect(filePaths).not.toContain('.hidden-file.md');
+    expect(filePaths).not.toContain('_draft-file.md');
+  });
+
+  it('should allow custom ignore patterns', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+      ignore: ['test-*'], // Custom pattern: ignore files starting with test-
+    });
+    const pages = source.getPages();
+    // With custom ignore, hidden files should now be included
+    const filePaths = pages.map(p => path.basename(p.filePath));
+    expect(filePaths).toContain('.hidden-file.md');
+    expect(filePaths).toContain('_draft-file.md');
+  });
+
+  it('should support multiple ignore patterns', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+      ignore: ['_*', '.*', 'visible-*'], // Add pattern to ignore visible-*
+    });
+    const pages = source.getPages();
+    const filePaths = pages.map(p => path.basename(p.filePath));
+    expect(filePaths).not.toContain('visible-file.md');
+    expect(filePaths).not.toContain('.hidden-file.md');
+    expect(filePaths).not.toContain('_draft-file.md');
+  });
+});
+
+// =============================================================================
 // TC: Performance Benchmarks
 // =============================================================================
 describe('Performance', () => {

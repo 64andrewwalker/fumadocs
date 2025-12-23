@@ -254,8 +254,12 @@ export interface CompatSourceOptions {
   dir: string;
   /** URL 基础路径 */
   baseUrl: string;
-  /** 支持的文件扩展名 */
+  /** 支持的文件扩展名，默认 ['.md', '.mdx'] */
   extensions?: string[];
+  /** 索引文件名，默认 ['README.md', 'readme.md', 'index.md', 'index.mdx'] */
+  indexFiles?: string[];
+  /** 忽略的文件模式，默认 ['_*', '.*'] - 匹配以 _ 或 . 开头的文件 */
+  ignore?: string[];
   /** 最大文件大小（字节），默认 10MB */
   maxFileSize?: number;
   /** 是否转换相对链接，默认 true */
@@ -325,9 +329,26 @@ function extractDescription(content: string, _filePath: string): string {
 /**
  * 扫描目录获取所有 markdown 文件
  */
+/**
+ * 检查文件名是否匹配忽略模式
+ */
+function matchesIgnorePattern(fileName: string, patterns: string[]): boolean {
+  for (const pattern of patterns) {
+    // 支持简单的通配符模式: _* 和 .*
+    if (pattern.endsWith('*')) {
+      const prefix = pattern.slice(0, -1);
+      if (fileName.startsWith(prefix)) return true;
+    } else if (fileName === pattern) {
+      return true;
+    }
+  }
+  return false;
+}
+
 async function scanDirectory(
   dir: string,
   extensions: string[],
+  ignorePatterns: string[],
   basePath: string = ''
 ): Promise<string[]> {
   const files: string[] = [];
@@ -339,14 +360,13 @@ async function scanDirectory(
       const fullPath = path.join(dir, entry.name);
       const relativePath = path.join(basePath, entry.name);
 
+      // 检查是否匹配忽略模式
+      if (matchesIgnorePattern(entry.name, ignorePatterns)) continue;
+
       if (entry.isDirectory()) {
-        // 跳过隐藏目录和以 _ 开头的目录
-        if (entry.name.startsWith('.') || entry.name.startsWith('_')) continue;
-        const subFiles = await scanDirectory(fullPath, extensions, relativePath);
+        const subFiles = await scanDirectory(fullPath, extensions, ignorePatterns, relativePath);
         files.push(...subFiles);
       } else if (entry.isFile()) {
-        // 跳过隐藏文件和以 _ 开头的文件（草稿）
-        if (entry.name.startsWith('.') || entry.name.startsWith('_')) continue;
         const ext = path.extname(entry.name).toLowerCase();
         if (extensions.includes(ext)) {
           files.push(relativePath);
@@ -360,13 +380,25 @@ async function scanDirectory(
   return files;
 }
 
+// 默认索引文件名列表
+const DEFAULT_INDEX_FILES = ['readme.md', 'readme.mdx', 'index.md', 'index.mdx'];
+
 /**
- * 检查文件是否是索引文件（README.md, index.md 等）
+ * 创建索引文件检查函数
+ */
+function createIndexFileChecker(indexFiles: string[]): (fileName: string) => boolean {
+  const normalizedIndexFiles = indexFiles.map(f => f.toLowerCase());
+  return (fileName: string): boolean => {
+    return normalizedIndexFiles.includes(fileName.toLowerCase());
+  };
+}
+
+/**
+ * 检查文件是否是索引文件（默认列表）
  */
 function isIndexFile(fileName: string): boolean {
   const name = fileName.toLowerCase();
-  return name === 'readme.md' || name === 'readme.mdx' ||
-         name === 'index.md' || name === 'index.mdx';
+  return DEFAULT_INDEX_FILES.includes(name);
 }
 
 /**
@@ -419,6 +451,8 @@ export async function createCompatSource(options: CompatSourceOptions) {
     dir,
     baseUrl,
     extensions = ['.md', '.mdx'],
+    indexFiles = ['README.md', 'readme.md', 'index.md', 'index.mdx'],
+    ignore = ['_*', '.*'],
     maxFileSize = DEFAULT_MAX_FILE_SIZE,
     transformLinks = true,
     imageBasePath = '',
@@ -432,7 +466,7 @@ export async function createCompatSource(options: CompatSourceOptions) {
     : path.join(process.cwd(), dir);
 
   // 扫描所有文件并排序（README 优先）
-  const unsortedFiles = await scanDirectory(absoluteDir, extensions);
+  const unsortedFiles = await scanDirectory(absoluteDir, extensions, ignore);
   const files = sortFiles(unsortedFiles);
   const pages: Map<string, RawPage> = new Map();
   const warnings: string[] = [];
