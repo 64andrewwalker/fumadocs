@@ -457,6 +457,16 @@ export async function createCompatSource(options: CompatSourceOptions) {
     // 4. 预处理 markdown 内容，使其与 MDX 兼容
     processedContent = preprocessMarkdown(processedContent);
 
+    // 5. 冲突检测：检查是否有同名 slug
+    if (pages.has(slugKey)) {
+      const existingPage = pages.get(slugKey);
+      warnings.push(
+        `Slug conflict detected: "${file}" conflicts with "${existingPage?.filePath}". ` +
+        `Using first file encountered.`
+      );
+      continue; // 跳过冲突的文件，保留第一个
+    }
+
     pages.set(slugKey, {
       filePath,
       slugs,
@@ -471,62 +481,123 @@ export async function createCompatSource(options: CompatSourceOptions) {
   }
 
   // 构建页面树
+  /**
+   * 将 slug 转换为漂亮的显示名称
+   */
+  function slugToDisplayName(slug: string): string {
+    return slug
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  /**
+   * 构建页面树，保留文件夹层级结构
+   */
   function buildPageTree(): Root {
     const root: Root = {
-      name: 'Raw Notes',
+      name: 'Documents',
       children: [],
     };
 
     const folders: Map<string, Folder> = new Map();
+    const folderIndexPages: Map<string, RawPage> = new Map();
 
     // 排序页面
     const sortedPages = Array.from(pages.values()).sort((a, b) =>
       a.url.localeCompare(b.url)
     );
 
+    // 第一遍：识别文件夹 index 页面
     for (const page of sortedPages) {
+      const fileName = path.basename(page.filePath).toLowerCase();
+      if (isIndexFile(fileName) && page.slugs.length > 0) {
+        // 这是一个文件夹的 index 页面
+        const folderKey = page.slugs.join('/');
+        folderIndexPages.set(folderKey, page);
+      }
+    }
+
+    // 第二遍：构建树
+    for (const page of sortedPages) {
+      const fileName = path.basename(page.filePath).toLowerCase();
+      const isIndex = isIndexFile(fileName);
+
+      // 根目录的 index 页面
+      if (page.slugs.length === 0) {
+        const node: Item = {
+          type: 'page',
+          name: page.data.title,
+          url: page.url,
+        };
+        root.children.unshift(node); // 放在最前面
+        continue;
+      }
+
+      // 文件夹的 index 页面 - 作为文件夹的入口
+      if (isIndex && page.slugs.length > 0) {
+        // 确保文件夹存在
+        ensureFolderPath(page.slugs, root, folders, folderIndexPages);
+        continue;
+      }
+
+      // 普通页面
       const node: Item = {
         type: 'page',
         name: page.data.title,
         url: page.url,
       };
 
-      if (page.slugs.length <= 1) {
+      if (page.slugs.length === 1) {
         // 顶级页面
         root.children.push(node);
       } else {
         // 嵌套页面 - 创建文件夹结构
         const folderSlugs = page.slugs.slice(0, -1);
-        const folderKey = folderSlugs.join('/');
-
-        let folder = folders.get(folderKey);
-        if (!folder) {
-          folder = {
-            type: 'folder',
-            name: folderSlugs[folderSlugs.length - 1] || 'Folder',
-            children: [],
-          };
-          folders.set(folderKey, folder);
-
-          // 添加到父级
-          if (folderSlugs.length === 1) {
-            root.children.push(folder);
-          } else {
-            const parentKey = folderSlugs.slice(0, -1).join('/');
-            const parent = folders.get(parentKey);
-            if (parent) {
-              parent.children.push(folder);
-            } else {
-              root.children.push(folder);
-            }
-          }
-        }
-
+        const folder = ensureFolderPath(folderSlugs, root, folders, folderIndexPages);
         folder.children.push(node);
       }
     }
 
     return root;
+  }
+
+  /**
+   * 确保文件夹路径存在，返回最深层的文件夹
+   */
+  function ensureFolderPath(
+    slugs: string[],
+    root: Root,
+    folders: Map<string, Folder>,
+    folderIndexPages: Map<string, RawPage>
+  ): Folder {
+    // 使用 any 来绕过类型检查，因为 Root.children 和 Folder.children 类型略有不同
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let currentParent: { children: any[] } = root;
+
+    for (let i = 0; i < slugs.length; i++) {
+      const folderKey = slugs.slice(0, i + 1).join('/');
+      
+      let folder = folders.get(folderKey);
+      if (!folder) {
+        const folderName = slugs[i];
+        const indexPage = folderIndexPages.get(folderKey);
+        
+        folder = {
+          type: 'folder',
+          name: indexPage?.data.title || slugToDisplayName(folderName),
+          children: [],
+          // 如果有 index 页面，添加入口链接
+          ...(indexPage && { index: { type: 'page' as const, name: indexPage.data.title, url: indexPage.url } }),
+        };
+        folders.set(folderKey, folder);
+        currentParent.children.push(folder);
+      }
+      
+      currentParent = folder;
+    }
+
+    return folders.get(slugs.join('/'))!;
   }
 
   return {

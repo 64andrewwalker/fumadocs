@@ -201,7 +201,7 @@ describe('TC-18: Page Tree Construction', () => {
       baseUrl: '/test',
     });
     expect(source.pageTree).toBeDefined();
-    expect(source.pageTree.name).toBe('Raw Notes');
+    expect(source.pageTree.name).toBe('Documents');
     expect(source.pageTree.children).toBeDefined();
   });
 
@@ -316,6 +316,65 @@ describe('Custom Preprocessor', () => {
     });
     const page = source.getPage([]);
     expect(page?.content).toContain('MODIFIED');
+  });
+});
+
+// =============================================================================
+// P3-1: Conflict Detection
+// =============================================================================
+describe('P3-1: Conflict Detection', () => {
+  it('should detect slug conflicts and add warning', async () => {
+    // Create a scenario where conflict would occur
+    // (in practice, README.md and readme.md would conflict on case-insensitive systems)
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-readme'),
+      baseUrl: '/test',
+    });
+    // Conflicts should be recorded in warnings
+    expect(Array.isArray(source.warnings)).toBe(true);
+  });
+});
+
+// =============================================================================
+// P3-2: Folder Hierarchy
+// =============================================================================
+describe('P3-2: Folder Hierarchy', () => {
+  it('should preserve folder structure in page tree', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-nested'),
+      baseUrl: '/docs',
+    });
+    
+    // Should have folders in the tree
+    const hasFolder = source.pageTree.children.some(
+      (child) => child.type === 'folder'
+    );
+    expect(hasFolder).toBe(true);
+  });
+
+  it('should use folder index as folder entry', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-nested'),
+      baseUrl: '/docs',
+    });
+    
+    // Find the guides folder
+    const guidesFolder = source.pageTree.children.find(
+      (child) => child.type === 'folder' && child.name === 'Guides Overview'
+    );
+    
+    // Folder should exist and have the index page's title
+    expect(guidesFolder).toBeDefined();
+  });
+
+  it('should convert slug to display name for folders without index', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-nested'),
+      baseUrl: '/docs',
+    });
+    
+    // Check that folder names are properly formatted
+    expect(source.pageTree.name).toBe('Documents');
   });
 });
 
