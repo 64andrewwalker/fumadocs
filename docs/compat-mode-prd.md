@@ -154,10 +154,10 @@ pm-notes/                    →  /raw-notes/
 ### 3.15 Mermaid 图表
 - **情况**: ` ```mermaid ` 代码块
 - **处理**: 
-  - 代码块内容被保留
-  - 需要额外插件 (rehype-mermaid) 才能渲染为图表
-  - 默认显示为代码块
-- **状态**: ⚠️ 显示为代码（需要 rehype-mermaid）
+  - 使用 remarkMdxMermaid 插件 + 客户端组件
+  - 支持流程图、序列图、类图等
+  - 自动适配暗黑/亮色主题
+- **状态**: ✅ 已实现
 
 ### 3.16 任务列表
 - **情况**: `- [ ] task` 或 `- [x] done`
@@ -251,7 +251,9 @@ interface CompatSourceOptions {
 | 数学公式 (remark-math) | ✅ | P3 |
 | GFM (remark-gfm) | ✅ | P3 |
 | 脚注 | ✅ | P3 |
-| Mermaid 渲染 | ⚠️ 需要客户端组件 | P4 |
+| Mermaid 渲染 | ✅ 客户端组件已实现 | P4 |
+| 代码高亮 | ✅ 多语言支持 | P4 |
+| 性能基准测试 | ✅ | P4 |
 
 ## 7. 测试场景
 
