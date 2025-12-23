@@ -41,22 +41,30 @@
 
 ## Test Summary
 
-**总测试数**: 47  
-**通过**: 47  
+**总测试数**: 59  
+**通过**: 59  
 **失败**: 0  
-**覆盖率**: 完整覆盖 P0、P1、P2、P3 功能
+**覆盖率**: 完整覆盖 P0、P1、P2、P3 功能 + 扩展边缘情况
 
-### 新增边缘情况测试 (v1.2)
-| 测试 | 描述 |
-| --- | --- |
-| Valid Frontmatter | 正确解析 frontmatter 中的 title/description |
-| Invalid Frontmatter | 容错处理无效 YAML |
-| Hidden Files | 忽略 `.xxx` 文件 |
-| Draft Files | 忽略 `_xxx` 文件 |
-| No Title | 无标题时使用文件名 |
-| HTML Tags | 保留标准 HTML 标签 |
-| Task Lists | 保留任务列表语法 |
-| Code Blocks | 保护代码块内容不被转义 |
+### 边缘情况测试 (v1.3)
+| 测试 | 描述 | 状态 |
+| --- | --- | --- |
+| Valid Frontmatter | 正确解析 frontmatter 中的 title/description | ✅ |
+| Invalid Frontmatter | 容错处理无效 YAML | ✅ |
+| Hidden Files | 忽略 `.xxx` 文件 | ✅ |
+| Draft Files | 忽略 `_xxx` 文件 | ✅ |
+| No Title | 无标题时使用文件名 | ✅ |
+| HTML Tags | 保留标准 HTML 标签 | ✅ |
+| Task Lists | 保留任务列表语法 | ✅ |
+| Code Blocks | 保护代码块内容不被转义 | ✅ |
+| Deep Nesting (>5) | 支持 5+ 层嵌套目录 | ✅ |
+| Mermaid | 保留 mermaid 代码块 | ✅ |
+| Math Formulas | 保留 $ 和 $$ 分隔符 | ✅ |
+| Chinese Filename | 处理中文文件名，生成 URL 安全 slug | ✅ |
+| BOM Files | 正确处理 UTF-8 BOM | ✅ |
+
+### 已知限制
+- **数学公式**: 花括号在预处理时会被转义，需要 remark-math 插件支持
 
 ## Test File Structure
 
