@@ -174,9 +174,9 @@ pm-notes/                    →  /raw-notes/
 ### 3.18 脚注
 - **情况**: `[^1]: footnote content`
 - **处理**: 
-  - 需要 remark-footnotes 插件
-  - 默认可能不支持
-- **状态**: ❌ 需要插件
+  - 通过 remark-gfm 插件支持
+  - 语法 `[^1]` 和 `[^1]:` 都支持
+- **状态**: ✅ 已实现
 
 ### 3.19 缩写定义
 - **情况**: `*[HTML]: Hyper Text Markup Language`
@@ -250,8 +250,8 @@ interface CompatSourceOptions {
 | 冲突检测 | ✅ | P3 |
 | 数学公式 (remark-math) | ✅ | P3 |
 | GFM (remark-gfm) | ✅ | P3 |
-| Mermaid | ⚠️ 代码块保留 | P4 |
-| 脚注 | ❌ | P4 |
+| 脚注 | ✅ | P3 |
+| Mermaid 渲染 | ⚠️ 需要客户端组件 | P4 |
 
 ## 7. 测试场景
 

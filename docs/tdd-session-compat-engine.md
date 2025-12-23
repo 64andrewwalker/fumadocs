@@ -41,10 +41,10 @@
 
 ## Test Summary
 
-**总测试数**: 60  
-**通过**: 60  
+**总测试数**: 63  
+**通过**: 63  
 **失败**: 0  
-**覆盖率**: 完整覆盖 P0、P1、P2、P3 功能 + 扩展边缘情况 + 插件支持
+**覆盖率**: 完整覆盖 P0、P1、P2、P3 功能 + 扩展边缘情况 + 完整插件支持
 
 ### 边缘情况测试 (v1.4)
 | 测试 | 描述 | 状态 |
@@ -63,6 +63,7 @@
 | Chinese Filename | 处理中文文件名，生成 URL 安全 slug | ✅ |
 | BOM Files | 正确处理 UTF-8 BOM | ✅ |
 | Math Curly Braces | 块级数学公式中花括号不被转义 | ✅ |
+| Footnotes | 脚注语法 `[^1]` 和定义 | ✅ |
 
 ### 已启用插件
 | 插件 | 功能 |
@@ -72,8 +73,8 @@
 | remark-gfm | GFM 扩展（表格、任务列表等） |
 
 ### 已知限制
-- **Mermaid 图表**: 需要额外的 rehype-mermaid 插件才能渲染
-- **脚注**: 需要 remark-footnotes 插件
+- **Mermaid 图表**: 需要设置客户端组件 + remarkMdxMermaid 插件
+  - 参考: fumadocs 文档 `/docs/ui/markdown/mermaid`
 
 ## Test File Structure
 
