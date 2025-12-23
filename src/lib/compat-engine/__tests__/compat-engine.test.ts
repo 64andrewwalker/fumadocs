@@ -859,3 +859,167 @@ describe('Footnotes Support', () => {
   });
 });
 
+// =============================================================================
+// TC: GFM Extensions
+// =============================================================================
+describe('GFM Extensions', () => {
+  it('should preserve strikethrough syntax', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['gfm-extensions']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('~~This text is strikethrough~~');
+  });
+
+  it('should preserve autolinks', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['gfm-extensions']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('https://github.com');
+    expect(page?.content).toContain('contact@example.com');
+  });
+
+  it('should preserve table alignment syntax', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['gfm-extensions']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain(':-----');
+    expect(page?.content).toContain(':------:');
+    expect(page?.content).toContain('------:');
+  });
+
+  it('should preserve task list syntax', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['gfm-extensions']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('- [x] Task 1');
+    expect(page?.content).toContain('- [ ] Task 3');
+  });
+});
+
+// =============================================================================
+// TC: Blockquotes and Callouts
+// =============================================================================
+describe('Blockquotes and Callouts', () => {
+  it('should preserve standard blockquotes', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['blockquote-callout']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('> This is a simple blockquote');
+  });
+
+  it('should preserve nested blockquotes', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['blockquote-callout']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('>> Level 2');
+    expect(page?.content).toContain('>>> Level 3');
+  });
+
+  it('should preserve GitHub callout syntax', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['blockquote-callout']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('[!NOTE]');
+    expect(page?.content).toContain('[!WARNING]');
+    expect(page?.content).toContain('[!TIP]');
+  });
+
+  it('should preserve code blocks in blockquotes', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['blockquote-callout']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain("console.log('Hello')");
+  });
+});
+
+// =============================================================================
+// TC: Links and Images
+// =============================================================================
+describe('Links and Images', () => {
+  it('should preserve standard links', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['links-and-images']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('[Regular link](https://example.com)');
+  });
+
+  it('should preserve links with titles', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['links-and-images']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('"Example Title"');
+  });
+
+  it('should preserve reference links', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['links-and-images']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('[Reference link][ref1]');
+    expect(page?.content).toContain('[ref1]: https://example.com');
+  });
+
+  it('should preserve image syntax', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['links-and-images']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('![Alt text]');
+  });
+
+  it('should preserve anchor links', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['links-and-images']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('#standard-links');
+  });
+
+  it('should preserve mailto and tel links', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'edge-cases'),
+      baseUrl: '/test',
+    });
+    const page = source.getPage(['links-and-images']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('mailto:test@example.com');
+    expect(page?.content).toContain('tel:+1234567890');
+  });
+});
+
