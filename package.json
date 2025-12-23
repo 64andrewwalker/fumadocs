@@ -10,7 +10,9 @@
     "postinstall": "fumadocs-mdx",
     "lint": "eslint",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "preview": "./scripts/preview-local.sh",
+    "preview:docker": "./scripts/preview-docker.sh"
   },
   "dependencies": {
     "@fumadocs/mdx-remote": "^1.4.3",

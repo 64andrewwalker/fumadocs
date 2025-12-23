@@ -41,7 +41,7 @@ COPY . .
 RUN rm -rf /app/content/docs/*
 
 # Copy and setup entrypoint script
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY scripts/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 # Enable pnpm
