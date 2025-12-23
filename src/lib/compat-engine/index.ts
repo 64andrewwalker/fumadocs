@@ -1,0 +1,443 @@
+/**
+ * Fumadocs Compat Engine
+ *
+ * 兼容层引擎，用于处理非标准的 markdown 文件
+ * 允许渲染没有标准 frontmatter 的原始 markdown 文档
+ */
+
+import fs from 'fs/promises';
+import path from 'path';
+import matter from 'gray-matter';
+import type { Root, Folder, Item } from 'fumadocs-core/page-tree';
+
+/**
+ * 预处理 markdown 内容，使其与 MDX 兼容
+ * - 转义 JSX 敏感字符（< > { }）在代码块和表格中
+ * - 处理表格中的特殊字符
+ */
+function preprocessMarkdown(content: string): string {
+  const lines = content.split('\n');
+  const result: string[] = [];
+  let inCodeBlock = false;
+  let inTable = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+
+    // 检测代码块边界
+    if (line.trim().startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      result.push(line);
+      continue;
+    }
+
+    // 在代码块中不做处理（代码块内容由 MDX 特殊处理）
+    if (inCodeBlock) {
+      result.push(line);
+      continue;
+    }
+
+    // 检测表格（以 | 开头或包含 |---|）
+    const isTableLine = line.trim().startsWith('|') || /\|[\s-]+\|/.test(line);
+    if (isTableLine) {
+      inTable = true;
+      // 在表格中转义 JSX 敏感字符
+      line = escapeJsxInText(line);
+    } else if (inTable && line.trim() === '') {
+      inTable = false;
+    }
+
+    // 处理内联代码和普通文本中的特殊字符
+    if (!isTableLine) {
+      line = escapeJsxInNonCodeText(line);
+    }
+
+    result.push(line);
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * 转义表格中的 JSX 敏感字符
+ */
+function escapeJsxInText(text: string): string {
+  // 保护内联代码，不要转义其中的内容
+  const codeSegments: string[] = [];
+  let processed = text.replace(/`[^`]+`/g, (match) => {
+    codeSegments.push(match);
+    return `__CODE_SEGMENT_${codeSegments.length - 1}__`;
+  });
+
+  // 在表格中，更激进地转义 < 字符
+  // 只保留明确的 HTML 标签（如 <strong>, </em>, <a href>）
+  // 转义其他所有 < 字符（如 <16, <something 后面不是有效标签名的）
+  processed = processed.replace(/<(?![a-zA-Z][a-zA-Z0-9]*[\s>\/]|\/[a-zA-Z])/g, '&lt;');
+  processed = processed.replace(/{/g, '\\{');
+  processed = processed.replace(/}/g, '\\}');
+
+  // 恢复内联代码
+  codeSegments.forEach((segment, index) => {
+    processed = processed.replace(`__CODE_SEGMENT_${index}__`, segment);
+  });
+
+  return processed;
+}
+
+/**
+ * 在非代码文本中转义单独的 < > { } 字符
+ */
+function escapeJsxInNonCodeText(text: string): string {
+  // 保护内联代码
+  const codeSegments: string[] = [];
+  let processed = text.replace(/`[^`]+`/g, (match) => {
+    codeSegments.push(match);
+    return `__CODE_SEGMENT_${codeSegments.length - 1}__`;
+  });
+
+  // 只转义明显不是 HTML/JSX 标签的 < 和 {
+  // 例如: "< 16Ω" 或 "3-6个月" 中不需要转义
+  // 但 "{something}" 需要转义为 \{something\}
+  
+  // 转义独立的 { 和 }（不是 JSX 表达式）
+  // 匹配 { 后面跟着非字母或换行的情况
+  processed = processed.replace(/{(?![a-zA-Z_$])/g, '\\{');
+  processed = processed.replace(/(?<![a-zA-Z0-9_$])}/g, '\\}');
+
+  // 恢复内联代码
+  codeSegments.forEach((segment, index) => {
+    processed = processed.replace(`__CODE_SEGMENT_${index}__`, segment);
+  });
+
+  return processed;
+}
+
+export interface RawPage {
+  /** 文件路径 */
+  filePath: string;
+  /** URL slugs */
+  slugs: string[];
+  /** 完整 URL */
+  url: string;
+  /** 原始文件内容 */
+  content: string;
+  /** 页面数据 */
+  data: {
+    title: string;
+    description: string;
+    /** 原始 frontmatter（如果有） */
+    frontmatter: Record<string, unknown>;
+  };
+}
+
+export interface CompatSourceOptions {
+  /** 内容目录路径（相对于项目根目录） */
+  dir: string;
+  /** URL 基础路径 */
+  baseUrl: string;
+  /** 支持的文件扩展名 */
+  extensions?: string[];
+  /** 自定义标题提取器 */
+  titleExtractor?: (content: string, filePath: string) => string;
+  /** 自定义描述提取器 */
+  descriptionExtractor?: (content: string, filePath: string) => string;
+}
+
+/**
+ * 从 markdown 内容中提取标题
+ * 优先级：frontmatter.title > 第一个 # 标题 > 文件名
+ */
+function extractTitle(content: string, filePath: string): string {
+  // 尝试从第一个 # 标题提取
+  const h1Match = content.match(/^#\s+(.+)$/m);
+  if (h1Match) {
+    return h1Match[1].trim();
+  }
+
+  // 回退到文件名
+  const fileName = path.basename(filePath, path.extname(filePath));
+  return fileName
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * 从 markdown 内容中提取描述
+ * 优先级：frontmatter.description > 第一段非标题文本
+ */
+function extractDescription(content: string, _filePath: string): string {
+  // 移除 frontmatter
+  const contentWithoutFrontmatter = content.replace(/^---[\s\S]*?---\n?/, '');
+
+  // 移除标题行
+  const lines = contentWithoutFrontmatter.split('\n');
+  const paragraphLines: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // 跳过空行、标题、引用块标记
+    if (!trimmed || trimmed.startsWith('#') || trimmed === '>') {
+      if (paragraphLines.length > 0) break; // 已经收集了一段内容
+      continue;
+    }
+    // 跳过引用块内容（以 > 开头），但收集其内容
+    if (trimmed.startsWith('>')) {
+      const quoteContent = trimmed.slice(1).trim();
+      if (quoteContent && !quoteContent.startsWith('**')) {
+        paragraphLines.push(quoteContent);
+      }
+      continue;
+    }
+    paragraphLines.push(trimmed);
+  }
+
+  const description = paragraphLines.join(' ').slice(0, 200);
+  return description || 'No description available';
+}
+
+/**
+ * 扫描目录获取所有 markdown 文件
+ */
+async function scanDirectory(
+  dir: string,
+  extensions: string[],
+  basePath: string = ''
+): Promise<string[]> {
+  const files: string[] = [];
+
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      const relativePath = path.join(basePath, entry.name);
+
+      if (entry.isDirectory()) {
+        // 跳过隐藏目录和以 _ 开头的目录
+        if (entry.name.startsWith('.') || entry.name.startsWith('_')) continue;
+        const subFiles = await scanDirectory(fullPath, extensions, relativePath);
+        files.push(...subFiles);
+      } else if (entry.isFile()) {
+        // 跳过隐藏文件和以 _ 开头的文件（草稿）
+        if (entry.name.startsWith('.') || entry.name.startsWith('_')) continue;
+        const ext = path.extname(entry.name).toLowerCase();
+        if (extensions.includes(ext)) {
+          files.push(relativePath);
+        }
+      }
+    }
+  } catch {
+    // 目录不存在或无法访问
+  }
+
+  return files;
+}
+
+/**
+ * 检查文件是否是索引文件（README.md, index.md 等）
+ */
+function isIndexFile(fileName: string): boolean {
+  const name = fileName.toLowerCase();
+  return name === 'readme.md' || name === 'readme.mdx' ||
+         name === 'index.md' || name === 'index.mdx';
+}
+
+/**
+ * 将文件路径转换为 URL slugs
+ */
+function filePathToSlugs(filePath: string): string[] {
+  const withoutExt = filePath.replace(/\.(md|mdx)$/i, '');
+  const parts = withoutExt.split(path.sep).filter(Boolean);
+  const fileName = path.basename(filePath);
+
+  // 如果是 index 或 README 文件，移除最后一部分（作为目录的 index）
+  if (isIndexFile(fileName)) {
+    parts.pop();
+  }
+
+  return parts.map((part) =>
+    part
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-_]/g, '')
+  );
+}
+
+/**
+ * 文件排序：README > index > 其他按字母顺序
+ */
+function sortFiles(files: string[]): string[] {
+  return files.sort((a, b) => {
+    const aName = path.basename(a).toLowerCase();
+    const bName = path.basename(b).toLowerCase();
+    
+    // README 优先
+    if (aName.startsWith('readme')) return -1;
+    if (bName.startsWith('readme')) return 1;
+    
+    // index 次之
+    if (aName.startsWith('index')) return -1;
+    if (bName.startsWith('index')) return 1;
+    
+    // 其他按字母顺序
+    return a.localeCompare(b);
+  });
+}
+
+/**
+ * 创建兼容源
+ */
+export async function createCompatSource(options: CompatSourceOptions) {
+  const {
+    dir,
+    baseUrl,
+    extensions = ['.md', '.mdx'],
+    titleExtractor = extractTitle,
+    descriptionExtractor = extractDescription,
+  } = options;
+
+  const absoluteDir = path.isAbsolute(dir)
+    ? dir
+    : path.join(process.cwd(), dir);
+
+  // 扫描所有文件并排序（README 优先）
+  const unsortedFiles = await scanDirectory(absoluteDir, extensions);
+  const files = sortFiles(unsortedFiles);
+  const pages: Map<string, RawPage> = new Map();
+
+  // 解析每个文件
+  for (const file of files) {
+    const filePath = path.join(absoluteDir, file);
+    const content = await fs.readFile(filePath, 'utf-8');
+    const { data: frontmatter, content: rawContent } = matter(content);
+
+    const slugs = filePathToSlugs(file);
+    const slugKey = slugs.join('/') || 'index';
+
+    const title =
+      (frontmatter.title as string) || titleExtractor(rawContent, filePath);
+    const description =
+      (frontmatter.description as string) ||
+      descriptionExtractor(rawContent, filePath);
+
+    // 预处理 markdown 内容，使其与 MDX 兼容
+    const processedContent = preprocessMarkdown(rawContent);
+
+    pages.set(slugKey, {
+      filePath,
+      slugs,
+      url: slugs.length > 0 ? `${baseUrl}/${slugs.join('/')}` : baseUrl,
+      content: processedContent,
+      data: {
+        title,
+        description,
+        frontmatter,
+      },
+    });
+  }
+
+  // 构建页面树
+  function buildPageTree(): Root {
+    const root: Root = {
+      name: 'Raw Notes',
+      children: [],
+    };
+
+    const folders: Map<string, Folder> = new Map();
+
+    // 排序页面
+    const sortedPages = Array.from(pages.values()).sort((a, b) =>
+      a.url.localeCompare(b.url)
+    );
+
+    for (const page of sortedPages) {
+      const node: Item = {
+        type: 'page',
+        name: page.data.title,
+        url: page.url,
+      };
+
+      if (page.slugs.length <= 1) {
+        // 顶级页面
+        root.children.push(node);
+      } else {
+        // 嵌套页面 - 创建文件夹结构
+        const folderSlugs = page.slugs.slice(0, -1);
+        const folderKey = folderSlugs.join('/');
+
+        let folder = folders.get(folderKey);
+        if (!folder) {
+          folder = {
+            type: 'folder',
+            name: folderSlugs[folderSlugs.length - 1] || 'Folder',
+            children: [],
+          };
+          folders.set(folderKey, folder);
+
+          // 添加到父级
+          if (folderSlugs.length === 1) {
+            root.children.push(folder);
+          } else {
+            const parentKey = folderSlugs.slice(0, -1).join('/');
+            const parent = folders.get(parentKey);
+            if (parent) {
+              parent.children.push(folder);
+            } else {
+              root.children.push(folder);
+            }
+          }
+        }
+
+        folder.children.push(node);
+      }
+    }
+
+    return root;
+  }
+
+  return {
+    /**
+     * 获取单个页面
+     */
+    getPage(slugs: string[] | undefined): RawPage | undefined {
+      const key = slugs?.join('/') || 'index';
+      return pages.get(key);
+    },
+
+    /**
+     * 获取所有页面
+     */
+    getPages(): RawPage[] {
+      return Array.from(pages.values());
+    },
+
+    /**
+     * 生成静态参数
+     */
+    generateParams() {
+      return Array.from(pages.values()).map((page) => ({
+        slug: page.slugs,
+      }));
+    },
+
+    /**
+     * 页面树（用于导航）
+     */
+    pageTree: buildPageTree(),
+
+    /**
+     * 基础 URL
+     */
+    baseUrl,
+
+    /**
+     * 重新加载源（用于开发模式）
+     */
+    async reload() {
+      return createCompatSource(options);
+    },
+  };
+}
+
+export type CompatSource = Awaited<ReturnType<typeof createCompatSource>>;
+

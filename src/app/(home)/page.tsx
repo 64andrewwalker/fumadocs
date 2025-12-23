@@ -130,7 +130,8 @@ const customComponents = {
 // Default homepage content
 const defaultHomepage = `
 <Hero title="Welcome" subtitle="Get started by reading the documentation.">
-  <Button href="/docs">Get Started</Button>
+  <Button href="/raw-notes">Browse Documents</Button>
+  <Button href="/docs" variant="outline">Standard Docs</Button>
 </Hero>
 `;
 
