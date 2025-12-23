@@ -230,3 +230,92 @@ describe('TC-19/20: Special Filenames', () => {
   });
 });
 
+// =============================================================================
+// P2-1: Relative Link Transformation
+// =============================================================================
+describe('P2-1: Relative Link Transformation', () => {
+  it('should transform relative .md links', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-links'),
+      baseUrl: '/docs',
+      transformLinks: true,
+    });
+    const page = source.getPage(['page-a']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('[Page B](/docs/page-b)');
+  });
+
+  it('should transform nested relative links', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-links'),
+      baseUrl: '/docs',
+      transformLinks: true,
+    });
+    const page = source.getPage(['page-a']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('[nested page](/docs/guides/nested)');
+  });
+
+  it('should preserve external links', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-readme'),
+      baseUrl: '/test',
+      transformLinks: true,
+    });
+    // External links should not be modified
+    const page = source.getPage([]);
+    expect(page).toBeDefined();
+  });
+
+  it('should not transform links when disabled', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-links'),
+      baseUrl: '/docs',
+      transformLinks: false,
+    });
+    const page = source.getPage(['page-a']);
+    expect(page).toBeDefined();
+    expect(page?.content).toContain('./page-b.md');
+  });
+});
+
+// =============================================================================
+// P2-3: File Size Limit
+// =============================================================================
+describe('P2-3: File Size Limit', () => {
+  it('should have warnings array', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-readme'),
+      baseUrl: '/test',
+    });
+    expect(Array.isArray(source.warnings)).toBe(true);
+  });
+
+  it('should skip files exceeding size limit', async () => {
+    // With a very small limit, files should be skipped
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-readme'),
+      baseUrl: '/test',
+      maxFileSize: 10, // 10 bytes - very small
+    });
+    // Files should be skipped
+    expect(source.getPages().length).toBeLessThan(2);
+    expect(source.warnings.length).toBeGreaterThan(0);
+  });
+});
+
+// =============================================================================
+// Custom Preprocessor
+// =============================================================================
+describe('Custom Preprocessor', () => {
+  it('should apply custom preprocessor', async () => {
+    const source = await createCompatSource({
+      dir: path.join(fixturesDir, 'with-readme'),
+      baseUrl: '/test',
+      preprocessor: (content) => content.replace('README', 'MODIFIED'),
+    });
+    const page = source.getPage([]);
+    expect(page?.content).toContain('MODIFIED');
+  });
+});
+

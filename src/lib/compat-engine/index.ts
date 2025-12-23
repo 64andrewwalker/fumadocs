@@ -10,6 +10,97 @@ import path from 'path';
 import matter from 'gray-matter';
 import type { Root, Folder, Item } from 'fumadocs-core/page-tree';
 
+// 默认最大文件大小：10MB
+const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+/**
+ * 转换相对链接为正确的 URL 路径
+ * 例如: [link](./other.md) → [link](/raw-notes/other)
+ */
+function transformRelativeLinks(
+  content: string,
+  baseUrl: string,
+  currentFilePath: string
+): string {
+  // 匹配 markdown 链接 [text](path)
+  return content.replace(
+    /\[([^\]]*)\]\(([^)]+)\)/g,
+    (match, text, href) => {
+      // 跳过外部链接、锚点链接、绝对路径
+      if (
+        href.startsWith('http://') ||
+        href.startsWith('https://') ||
+        href.startsWith('#') ||
+        href.startsWith('/')
+      ) {
+        return match;
+      }
+
+      // 处理相对 .md/.mdx 链接
+      if (href.endsWith('.md') || href.endsWith('.mdx')) {
+        const currentDir = path.dirname(currentFilePath);
+        const targetPath = path.join(currentDir, href);
+        const slugs = filePathToSlugsStatic(targetPath);
+        const newUrl = slugs.length > 0 ? `${baseUrl}/${slugs.join('/')}` : baseUrl;
+        return `[${text}](${newUrl})`;
+      }
+
+      return match;
+    }
+  );
+}
+
+/**
+ * 静态版本的 filePathToSlugs（不依赖闭包）
+ */
+function filePathToSlugsStatic(filePath: string): string[] {
+  const withoutExt = filePath.replace(/\.(md|mdx)$/i, '');
+  const parts = withoutExt.split(path.sep).filter(Boolean);
+  const fileName = path.basename(filePath);
+
+  if (isIndexFile(fileName)) {
+    parts.pop();
+  }
+
+  return parts.map((part) =>
+    part
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-_]/g, '')
+  );
+}
+
+/**
+ * 转换相对图片路径
+ * 例如: ![](./images/photo.png) → ![](/images/photo.png)
+ */
+function transformImagePaths(
+  content: string,
+  imageBasePath: string,
+  currentFilePath: string
+): string {
+  // 匹配 markdown 图片 ![alt](path)
+  return content.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    (match, alt, src) => {
+      // 跳过外部链接和绝对路径
+      if (
+        src.startsWith('http://') ||
+        src.startsWith('https://') ||
+        src.startsWith('/')
+      ) {
+        return match;
+      }
+
+      // 处理相对路径图片
+      const currentDir = path.dirname(currentFilePath);
+      const resolvedPath = path.join(currentDir, src);
+      const newSrc = `${imageBasePath}/${resolvedPath}`;
+      return `![${alt}](${newSrc})`;
+    }
+  );
+}
+
 /**
  * 预处理 markdown 内容，使其与 MDX 兼容
  * - 转义 JSX 敏感字符（< > { }）在代码块和表格中
@@ -137,10 +228,18 @@ export interface CompatSourceOptions {
   baseUrl: string;
   /** 支持的文件扩展名 */
   extensions?: string[];
+  /** 最大文件大小（字节），默认 10MB */
+  maxFileSize?: number;
+  /** 是否转换相对链接，默认 true */
+  transformLinks?: boolean;
+  /** 图片基础路径，用于处理相对图片路径 */
+  imageBasePath?: string;
   /** 自定义标题提取器 */
   titleExtractor?: (content: string, filePath: string) => string;
   /** 自定义描述提取器 */
   descriptionExtractor?: (content: string, filePath: string) => string;
+  /** 自定义预处理器 */
+  preprocessor?: (content: string, filePath: string) => string;
 }
 
 /**
@@ -292,8 +391,12 @@ export async function createCompatSource(options: CompatSourceOptions) {
     dir,
     baseUrl,
     extensions = ['.md', '.mdx'],
+    maxFileSize = DEFAULT_MAX_FILE_SIZE,
+    transformLinks = true,
+    imageBasePath = '',
     titleExtractor = extractTitle,
     descriptionExtractor = extractDescription,
+    preprocessor,
   } = options;
 
   const absoluteDir = path.isAbsolute(dir)
@@ -304,10 +407,23 @@ export async function createCompatSource(options: CompatSourceOptions) {
   const unsortedFiles = await scanDirectory(absoluteDir, extensions);
   const files = sortFiles(unsortedFiles);
   const pages: Map<string, RawPage> = new Map();
+  const warnings: string[] = [];
 
   // 解析每个文件
   for (const file of files) {
     const filePath = path.join(absoluteDir, file);
+    
+    // 检查文件大小
+    try {
+      const stats = await fs.stat(filePath);
+      if (stats.size > maxFileSize) {
+        warnings.push(`File ${file} exceeds max size (${stats.size} > ${maxFileSize}), skipping`);
+        continue;
+      }
+    } catch {
+      continue; // 文件不存在或无法访问
+    }
+
     const content = await fs.readFile(filePath, 'utf-8');
     const { data: frontmatter, content: rawContent } = matter(content);
 
@@ -320,8 +436,26 @@ export async function createCompatSource(options: CompatSourceOptions) {
       (frontmatter.description as string) ||
       descriptionExtractor(rawContent, filePath);
 
-    // 预处理 markdown 内容，使其与 MDX 兼容
-    const processedContent = preprocessMarkdown(rawContent);
+    // 处理内容
+    let processedContent = rawContent;
+
+    // 1. 应用自定义预处理器（如果有）
+    if (preprocessor) {
+      processedContent = preprocessor(processedContent, filePath);
+    }
+
+    // 2. 转换相对链接
+    if (transformLinks) {
+      processedContent = transformRelativeLinks(processedContent, baseUrl, file);
+    }
+
+    // 3. 转换图片路径
+    if (imageBasePath) {
+      processedContent = transformImagePaths(processedContent, imageBasePath, file);
+    }
+
+    // 4. 预处理 markdown 内容，使其与 MDX 兼容
+    processedContent = preprocessMarkdown(processedContent);
 
     pages.set(slugKey, {
       filePath,
@@ -429,6 +563,11 @@ export async function createCompatSource(options: CompatSourceOptions) {
      * 基础 URL
      */
     baseUrl,
+
+    /**
+     * 处理过程中的警告信息
+     */
+    warnings,
 
     /**
      * 重新加载源（用于开发模式）
