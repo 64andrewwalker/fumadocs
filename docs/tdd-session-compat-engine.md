@@ -41,12 +41,12 @@
 
 ## Test Summary
 
-**总测试数**: 59  
-**通过**: 59  
+**总测试数**: 60  
+**通过**: 60  
 **失败**: 0  
-**覆盖率**: 完整覆盖 P0、P1、P2、P3 功能 + 扩展边缘情况
+**覆盖率**: 完整覆盖 P0、P1、P2、P3 功能 + 扩展边缘情况 + 插件支持
 
-### 边缘情况测试 (v1.3)
+### 边缘情况测试 (v1.4)
 | 测试 | 描述 | 状态 |
 | --- | --- | --- |
 | Valid Frontmatter | 正确解析 frontmatter 中的 title/description | ✅ |
@@ -59,12 +59,21 @@
 | Code Blocks | 保护代码块内容不被转义 | ✅ |
 | Deep Nesting (>5) | 支持 5+ 层嵌套目录 | ✅ |
 | Mermaid | 保留 mermaid 代码块 | ✅ |
-| Math Formulas | 保留 $ 和 $$ 分隔符 | ✅ |
+| Math Formulas | 保留 $ 和 $$ 分隔符，保护花括号 | ✅ |
 | Chinese Filename | 处理中文文件名，生成 URL 安全 slug | ✅ |
 | BOM Files | 正确处理 UTF-8 BOM | ✅ |
+| Math Curly Braces | 块级数学公式中花括号不被转义 | ✅ |
+
+### 已启用插件
+| 插件 | 功能 |
+| --- | --- |
+| remark-math | LaTeX 数学公式解析 |
+| rehype-katex | 数学公式渲染 |
+| remark-gfm | GFM 扩展（表格、任务列表等） |
 
 ### 已知限制
-- **数学公式**: 花括号在预处理时会被转义，需要 remark-math 插件支持
+- **Mermaid 图表**: 需要额外的 rehype-mermaid 插件才能渲染
+- **脚注**: 需要 remark-footnotes 插件
 
 ## Test File Structure
 
