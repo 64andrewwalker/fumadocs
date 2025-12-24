@@ -1,115 +1,11 @@
 /**
- * Preprocessor Plugin Tests
+ * Preprocessor Tests
  * 
- * TDD tests for the preprocessor plugins that will be extracted.
- * These tests define the expected behavior for MDX compatibility transformations.
+ * TDD tests for the preprocessor functions in preprocessor/index.ts
  */
 
 import { describe, it, expect } from 'vitest';
-
-// =============================================================================
-// Note: These tests are written BEFORE the refactoring.
-// The actual function is currently in src/lib/compat-engine/index.ts
-// We'll import it after extraction.
-// =============================================================================
-
-// Temporary inline implementation to test against
-// This will be removed after extraction
-
-function escapeJsxInNonCodeText(text: string): string {
-  const protectedSegments: string[] = [];
-  
-  // Protect inline code
-  let processed = text.replace(/`[^`]+`/g, (match) => {
-    protectedSegments.push(match);
-    return `__PROTECTED_${protectedSegments.length - 1}__`;
-  });
-
-  // Protect inline math $...$
-  processed = processed.replace(/(?<!\$)\$(?!\$)([^$]+)\$(?!\$)/g, (match) => {
-    protectedSegments.push(match);
-    return `__PROTECTED_${protectedSegments.length - 1}__`;
-  });
-
-  // Protect block math $$...$$
-  processed = processed.replace(/\$\$([^$]*)\$\$/g, (match) => {
-    protectedSegments.push(match);
-    return `__PROTECTED_${protectedSegments.length - 1}__`;
-  });
-
-  // Convert HTML comments to MDX format
-  processed = processed.replace(/<!--([\s\S]*?)-->/g, '{/* $1 */}');
-  
-  // Escape < not followed by letter (invalid JSX tag start)
-  processed = processed.replace(/<(?![a-zA-Z_/])/g, '&lt;');
-  
-  // Escape standalone { and }
-  processed = processed.replace(/{(?![a-zA-Z_$])/g, '\\{');
-  processed = processed.replace(/(?<![a-zA-Z0-9_$])}/g, '\\}');
-
-  // Restore protected content
-  protectedSegments.forEach((segment, index) => {
-    processed = processed.replace(`__PROTECTED_${index}__`, segment);
-  });
-
-  return processed;
-}
-
-function preprocessMarkdown(content: string): string {
-  const lines = content.split('\n');
-  const result: string[] = [];
-  let inCodeBlock = false;
-  let inTable = false;
-  let inBlockMath = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-
-    // Detect code block boundaries
-    if (line.trim().startsWith('```')) {
-      inCodeBlock = !inCodeBlock;
-      result.push(line);
-      continue;
-    }
-
-    // Don't process inside code blocks
-    if (inCodeBlock) {
-      result.push(line);
-      continue;
-    }
-
-    // Detect block math $$ boundaries
-    if (line.trim() === '$$') {
-      inBlockMath = !inBlockMath;
-      result.push(line);
-      continue;
-    }
-
-    // Don't process inside block math
-    if (inBlockMath) {
-      result.push(line);
-      continue;
-    }
-
-    // Detect table
-    const isTableLine = line.trim().startsWith('|') || /\|[\s-]+\|/.test(line);
-    if (isTableLine) {
-      inTable = true;
-      line = escapeJsxInNonCodeText(line);
-    } else if (inTable && line.trim() === '') {
-      inTable = false;
-    }
-
-    // Process non-table lines
-    if (!isTableLine) {
-      line = escapeJsxInNonCodeText(line);
-    }
-
-    result.push(line);
-  }
-
-  return result.join('\n');
-}
+import { escapeJsxInNonCodeText, preprocessMarkdown } from '@/lib/compat-engine/preprocessor';
 
 // =============================================================================
 // TC-PRE-01: HTML Comment Conversion
