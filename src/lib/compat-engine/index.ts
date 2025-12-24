@@ -215,8 +215,16 @@ function escapeJsxInNonCodeText(text: string): string {
   });
 
   // 只转义明显不是 HTML/JSX 标签的 < 和 {
-  // 例如: "< 16Ω" 或 "3-6个月" 中不需要转义
-  // 但 "{something}" 需要转义为 \{something\}
+  // 例如: "<3" 或 "< 16Ω" 需要转义
+  // 但 "<div>" 不需要转义
+  
+  // 转换 HTML 注释为 MDX 注释格式
+  // <!-- comment --> 转换为 {/* comment */}
+  processed = processed.replace(/<!--([\s\S]*?)-->/g, '{/* $1 */}');
+  
+  // 转义 < 后面跟着非字母的情况（无效的 JSX 标签名开始）
+  // MDX 要求标签名以字母开头，所以 <3 <> <= 等都需要转义
+  processed = processed.replace(/<(?![a-zA-Z_/])/g, '&lt;');
   
   // 转义独立的 { 和 }（不是 JSX 表达式）
   // 匹配 { 后面跟着非字母或换行的情况
@@ -260,6 +268,8 @@ export interface CompatSourceOptions {
   indexFiles?: string[];
   /** 忽略的文件模式，默认 ['_*', '.*'] - 匹配以 _ 或 . 开头的文件 */
   ignore?: string[];
+  /** 显式包含的文件模式，优先级高于 ignore，例如 ['.promptpack/**'] */
+  include?: string[];
   /** 最大文件大小（字节），默认 10MB */
   maxFileSize?: number;
   /** 是否转换相对链接，默认 true */
@@ -330,25 +340,68 @@ function extractDescription(content: string, _filePath: string): string {
  * 扫描目录获取所有 markdown 文件
  */
 /**
- * 检查文件名是否匹配忽略模式
+ * 检查路径是否匹配模式
+ * 支持: _*, .*, tests/*, .promptpack/**
  */
-function matchesIgnorePattern(fileName: string, patterns: string[]): boolean {
-  for (const pattern of patterns) {
-    // 支持简单的通配符模式: _* 和 .*
-    if (pattern.endsWith('*')) {
-      const prefix = pattern.slice(0, -1);
-      if (fileName.startsWith(prefix)) return true;
-    } else if (fileName === pattern) {
-      return true;
+function matchesPattern(filePath: string, pattern: string): boolean {
+  // Normalize path separators
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  const parts = normalizedPath.split('/');
+  
+  // Pattern: starts with specific prefix (e.g., '_*', '.*')
+  if (pattern.endsWith('*') && !pattern.includes('/')) {
+    const prefix = pattern.slice(0, -1);
+    // Check if any part of the path starts with the prefix
+    return parts.some(part => part.startsWith(prefix));
+  }
+  
+  // Pattern: directory wildcard (e.g., 'tests/*', 'scripts/*')
+  if (pattern.endsWith('/*')) {
+    const dir = pattern.slice(0, -2);
+    return normalizedPath.startsWith(dir + '/') || parts[0] === dir;
+  }
+  
+  // Pattern: recursive directory wildcard (e.g., '.promptpack/**')
+  if (pattern.endsWith('/**')) {
+    const dir = pattern.slice(0, -3);
+    return normalizedPath.startsWith(dir + '/') || normalizedPath === dir;
+  }
+  
+  // Exact match
+  return normalizedPath === pattern || parts.includes(pattern);
+}
+
+/**
+ * 检查文件是否应该被包含
+ * 逻辑: include 优先级 > ignore
+ */
+function shouldIncludeFile(
+  relativePath: string,
+  ignorePatterns: string[],
+  includePatterns: string[]
+): boolean {
+  // First check if explicitly included
+  for (const pattern of includePatterns) {
+    if (matchesPattern(relativePath, pattern)) {
+      return true; // Explicitly included, override ignore
     }
   }
-  return false;
+  
+  // Then check if ignored
+  for (const pattern of ignorePatterns) {
+    if (matchesPattern(relativePath, pattern)) {
+      return false; // Ignored
+    }
+  }
+  
+  return true; // Default: include
 }
 
 async function scanDirectory(
   dir: string,
   extensions: string[],
   ignorePatterns: string[],
+  includePatterns: string[] = [],
   basePath: string = ''
 ): Promise<string[]> {
   const files: string[] = [];
@@ -358,17 +411,25 @@ async function scanDirectory(
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
-      const relativePath = path.join(basePath, entry.name);
-
-      // 检查是否匹配忽略模式
-      if (matchesIgnorePattern(entry.name, ignorePatterns)) continue;
+      const relativePath = path.join(basePath, entry.name).replace(/\\/g, '/');
 
       if (entry.isDirectory()) {
-        const subFiles = await scanDirectory(fullPath, extensions, ignorePatterns, relativePath);
+        // For directories: check if this directory path should be traversed
+        // Always traverse if any include pattern might match files inside
+        const shouldTraverse = 
+          shouldIncludeFile(relativePath, ignorePatterns, includePatterns) ||
+          includePatterns.some(p => p.startsWith(relativePath) || relativePath.match(new RegExp('^' + p.replace('**', '.*').replace('*', '[^/]*'))));
+        
+        // Always traverse directories that might contain included files
+        const subFiles = await scanDirectory(fullPath, extensions, ignorePatterns, includePatterns, relativePath);
         files.push(...subFiles);
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase();
-        if (extensions.includes(ext)) {
+        // First check extension
+        if (!extensions.includes(ext)) continue;
+        
+        // Then check include/ignore patterns
+        if (shouldIncludeFile(relativePath, ignorePatterns, includePatterns)) {
           files.push(relativePath);
         }
       }
@@ -453,6 +514,7 @@ export async function createCompatSource(options: CompatSourceOptions) {
     extensions = ['.md', '.mdx'],
     indexFiles = ['README.md', 'readme.md', 'index.md', 'index.mdx'],
     ignore = ['_*', '.*'],
+    include = [],
     maxFileSize = DEFAULT_MAX_FILE_SIZE,
     transformLinks = true,
     imageBasePath = '',
@@ -466,7 +528,7 @@ export async function createCompatSource(options: CompatSourceOptions) {
     : path.join(process.cwd(), dir);
 
   // 扫描所有文件并排序（README 优先）
-  const unsortedFiles = await scanDirectory(absoluteDir, extensions, ignore);
+  const unsortedFiles = await scanDirectory(absoluteDir, extensions, ignore, include);
   const files = sortFiles(unsortedFiles);
   const pages: Map<string, RawPage> = new Map();
   const warnings: string[] = [];
@@ -638,7 +700,34 @@ export async function createCompatSource(options: CompatSourceOptions) {
       }
     }
 
+    // 后处理：将只有 index 且没有子页面的文件夹转换为普通页面
+    flattenEmptyFolders(root);
+
     return root;
+  }
+
+  /**
+   * 递归地将只有 index 且没有子页面的文件夹转换为普通页面
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function flattenEmptyFolders(node: { children: any[] }): void {
+    for (let i = 0; i < node.children.length; i++) {
+      const child = node.children[i];
+      
+      if (child.type === 'folder') {
+        // 先递归处理子文件夹
+        flattenEmptyFolders(child);
+        
+        // 如果文件夹没有子页面但有 index，将其转换为普通页面
+        if (child.children.length === 0 && child.index) {
+          node.children[i] = {
+            type: 'page',
+            name: child.name,
+            url: child.index.url,
+          };
+        }
+      }
+    }
   }
 
   /**

@@ -5,8 +5,17 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/__tests__/**/*.test.ts'],
+    include: [
+      'src/**/__tests__/**/*.test.ts',
+      'tests/**/*.test.ts',
+    ],
     exclude: ['node_modules', '.next', 'out'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/lib/compat-engine/**/*.ts'],
+      exclude: ['**/*.test.ts', '**/types.ts'],
+    },
   },
   resolve: {
     alias: {

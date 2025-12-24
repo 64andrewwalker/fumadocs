@@ -1,7 +1,7 @@
 /**
  * Raw Notes Source
  *
- * 兼容源配置，用于加载 pm-notes 等非标准 markdown 文件
+ * 兼容源配置，用于加载 DocEngineering 等非标准 markdown 文件
  */
 
 import { createCompatSource, type CompatSource } from './compat-engine';
@@ -19,9 +19,12 @@ export async function getRawSource(): Promise<CompatSource> {
   }
 
   cachedSource = await createCompatSource({
-    dir: 'pm-notes',
+    dir: 'DocEngineering',
     baseUrl: '/raw-notes',
     extensions: ['.md', '.mdx'],
+    transformLinks: true,
+    ignore: ['_*', 'tests/*', 'scripts/*'],
+    include: ['.promptpack/**'],
   });
 
   return cachedSource;
