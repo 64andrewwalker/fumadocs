@@ -23,4 +23,7 @@ yarn-error.log*
 # others
 .env*.local
 .vercel
-next-env.d.tsDocEngineering/
+next-env.d.ts
+
+# compat engine test data (external git repo)
+DocEngineering/
