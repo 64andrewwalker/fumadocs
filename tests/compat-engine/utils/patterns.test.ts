@@ -1,68 +1,11 @@
 /**
  * Pattern Matching Utility Tests
  * 
- * TDD tests for the pattern matching functions that will be extracted to utils/patterns.ts
- * These tests define the expected behavior before refactoring.
+ * TDD tests for the pattern matching functions in utils/patterns.ts
  */
 
 import { describe, it, expect } from 'vitest';
-
-// =============================================================================
-// Note: These tests are written BEFORE the refactoring.
-// The actual functions are currently in src/lib/compat-engine/index.ts
-// We'll import them after extraction.
-// =============================================================================
-
-// Temporary inline implementations to test against
-// These will be removed after extraction
-
-function matchesPattern(filePath: string, pattern: string): boolean {
-  const normalizedPath = filePath.replace(/\\/g, '/');
-  const parts = normalizedPath.split('/');
-  
-  // Pattern: starts with specific prefix (e.g., '_*', '.*')
-  if (pattern.endsWith('*') && !pattern.includes('/')) {
-    const prefix = pattern.slice(0, -1);
-    return parts.some(part => part.startsWith(prefix));
-  }
-  
-  // Pattern: directory wildcard (e.g., 'tests/*', 'scripts/*')
-  if (pattern.endsWith('/*')) {
-    const dir = pattern.slice(0, -2);
-    return normalizedPath.startsWith(dir + '/') || parts[0] === dir;
-  }
-  
-  // Pattern: recursive directory wildcard (e.g., '.promptpack/**')
-  if (pattern.endsWith('/**')) {
-    const dir = pattern.slice(0, -3);
-    return normalizedPath.startsWith(dir + '/') || normalizedPath === dir;
-  }
-  
-  // Exact match
-  return normalizedPath === pattern || parts.includes(pattern);
-}
-
-function shouldIncludeFile(
-  relativePath: string,
-  ignorePatterns: string[],
-  includePatterns: string[]
-): boolean {
-  // First check if explicitly included
-  for (const pattern of includePatterns) {
-    if (matchesPattern(relativePath, pattern)) {
-      return true;
-    }
-  }
-  
-  // Then check if ignored
-  for (const pattern of ignorePatterns) {
-    if (matchesPattern(relativePath, pattern)) {
-      return false;
-    }
-  }
-  
-  return true;
-}
+import { matchesPattern, shouldIncludeFile } from '@/lib/compat-engine/utils/patterns';
 
 // =============================================================================
 // TC-PATTERN-01: Prefix Wildcard Patterns

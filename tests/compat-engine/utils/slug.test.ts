@@ -1,52 +1,11 @@
 /**
  * Slug Utility Tests
  * 
- * TDD tests for the slug generation functions that will be extracted to utils/slug.ts
- * These tests define the expected behavior before refactoring.
+ * TDD tests for the slug generation functions in utils/slug.ts
  */
 
 import { describe, it, expect } from 'vitest';
-
-// =============================================================================
-// Note: These tests are written BEFORE the refactoring.
-// The actual functions are currently in src/lib/compat-engine/index.ts
-// We'll import them after extraction.
-// =============================================================================
-
-// Temporary inline implementations to test against
-// These will be removed after extraction
-
-const DEFAULT_INDEX_FILES = ['readme.md', 'readme.mdx', 'index.md', 'index.mdx'];
-
-function isIndexFile(fileName: string): boolean {
-  const name = fileName.toLowerCase();
-  return DEFAULT_INDEX_FILES.includes(name);
-}
-
-function filePathToSlugs(filePath: string): string[] {
-  const withoutExt = filePath.replace(/\.(md|mdx)$/i, '');
-  const parts = withoutExt.split(/[/\\]/).filter(Boolean);
-  const fileName = filePath.split(/[/\\]/).pop() || '';
-
-  // If it's an index file, remove the last part
-  if (isIndexFile(fileName)) {
-    parts.pop();
-  }
-
-  return parts.map((part) =>
-    part
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-_]/g, '')
-  );
-}
-
-function slugToDisplayName(slug: string): string {
-  return slug
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
+import { isIndexFile, filePathToSlugs, slugToDisplayName } from '@/lib/compat-engine/utils/slug';
 
 // =============================================================================
 // TC-SLUG-01: Index File Detection

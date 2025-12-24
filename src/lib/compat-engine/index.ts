@@ -51,26 +51,6 @@ function transformRelativeLinks(
 }
 
 /**
- * 静态版本的 filePathToSlugs（不依赖闭包）
- */
-function filePathToSlugsStatic(filePath: string): string[] {
-  const withoutExt = filePath.replace(/\.(md|mdx)$/i, '');
-  const parts = withoutExt.split(path.sep).filter(Boolean);
-  const fileName = path.basename(filePath);
-
-  if (isIndexFile(fileName)) {
-    parts.pop();
-  }
-
-  return parts.map((part) =>
-    part
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-_]/g, '')
-  );
-}
-
-/**
  * 转换相对图片路径
  * 例如: ![](./images/photo.png) → ![](/images/photo.png)
  */
@@ -336,67 +316,20 @@ function extractDescription(content: string, _filePath: string): string {
   return description || 'No description available';
 }
 
+// Import utilities
+import { shouldIncludeFile } from './utils/patterns';
+import { 
+  isIndexFile, 
+  filePathToSlugs, 
+  filePathToSlugsStatic,
+  slugToDisplayName,
+  createIndexFileChecker,
+  DEFAULT_INDEX_FILES
+} from './utils/slug';
+
 /**
  * 扫描目录获取所有 markdown 文件
  */
-/**
- * 检查路径是否匹配模式
- * 支持: _*, .*, tests/*, .promptpack/**
- */
-function matchesPattern(filePath: string, pattern: string): boolean {
-  // Normalize path separators
-  const normalizedPath = filePath.replace(/\\/g, '/');
-  const parts = normalizedPath.split('/');
-  
-  // Pattern: starts with specific prefix (e.g., '_*', '.*')
-  if (pattern.endsWith('*') && !pattern.includes('/')) {
-    const prefix = pattern.slice(0, -1);
-    // Check if any part of the path starts with the prefix
-    return parts.some(part => part.startsWith(prefix));
-  }
-  
-  // Pattern: directory wildcard (e.g., 'tests/*', 'scripts/*')
-  if (pattern.endsWith('/*')) {
-    const dir = pattern.slice(0, -2);
-    return normalizedPath.startsWith(dir + '/') || parts[0] === dir;
-  }
-  
-  // Pattern: recursive directory wildcard (e.g., '.promptpack/**')
-  if (pattern.endsWith('/**')) {
-    const dir = pattern.slice(0, -3);
-    return normalizedPath.startsWith(dir + '/') || normalizedPath === dir;
-  }
-  
-  // Exact match
-  return normalizedPath === pattern || parts.includes(pattern);
-}
-
-/**
- * 检查文件是否应该被包含
- * 逻辑: include 优先级 > ignore
- */
-function shouldIncludeFile(
-  relativePath: string,
-  ignorePatterns: string[],
-  includePatterns: string[]
-): boolean {
-  // First check if explicitly included
-  for (const pattern of includePatterns) {
-    if (matchesPattern(relativePath, pattern)) {
-      return true; // Explicitly included, override ignore
-    }
-  }
-  
-  // Then check if ignored
-  for (const pattern of ignorePatterns) {
-    if (matchesPattern(relativePath, pattern)) {
-      return false; // Ignored
-    }
-  }
-  
-  return true; // Default: include
-}
-
 async function scanDirectory(
   dir: string,
   extensions: string[],
@@ -439,48 +372,6 @@ async function scanDirectory(
   }
 
   return files;
-}
-
-// 默认索引文件名列表
-const DEFAULT_INDEX_FILES = ['readme.md', 'readme.mdx', 'index.md', 'index.mdx'];
-
-/**
- * 创建索引文件检查函数
- */
-function createIndexFileChecker(indexFiles: string[]): (fileName: string) => boolean {
-  const normalizedIndexFiles = indexFiles.map(f => f.toLowerCase());
-  return (fileName: string): boolean => {
-    return normalizedIndexFiles.includes(fileName.toLowerCase());
-  };
-}
-
-/**
- * 检查文件是否是索引文件（默认列表）
- */
-function isIndexFile(fileName: string): boolean {
-  const name = fileName.toLowerCase();
-  return DEFAULT_INDEX_FILES.includes(name);
-}
-
-/**
- * 将文件路径转换为 URL slugs
- */
-function filePathToSlugs(filePath: string): string[] {
-  const withoutExt = filePath.replace(/\.(md|mdx)$/i, '');
-  const parts = withoutExt.split(path.sep).filter(Boolean);
-  const fileName = path.basename(filePath);
-
-  // 如果是 index 或 README 文件，移除最后一部分（作为目录的 index）
-  if (isIndexFile(fileName)) {
-    parts.pop();
-  }
-
-  return parts.map((part) =>
-    part
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-_]/g, '')
-  );
 }
 
 /**
@@ -622,16 +513,6 @@ export async function createCompatSource(options: CompatSourceOptions) {
   }
 
   // 构建页面树
-  /**
-   * 将 slug 转换为漂亮的显示名称
-   */
-  function slugToDisplayName(slug: string): string {
-    return slug
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
-
   /**
    * 构建页面树，保留文件夹层级结构
    */
