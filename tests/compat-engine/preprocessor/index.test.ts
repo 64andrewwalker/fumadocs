@@ -91,9 +91,10 @@ describe('Curly Brace Escaping', () => {
   });
 
   it('should escape opening brace not followed by identifier', () => {
-    expect(escapeJsxInNonCodeText('{ standalone')).toBe('\\{ standalone');
+    // Uses HTML entities to avoid MDX Unicode escape issues
+    expect(escapeJsxInNonCodeText('{ standalone')).toBe('&#123; standalone');
     // Note: closing brace after number is not escaped because of regex pattern
-    expect(escapeJsxInNonCodeText('{1 + 2}')).toContain('\\{');
+    expect(escapeJsxInNonCodeText('{1 + 2}')).toContain('&#123;');
   });
 
   it('should NOT escape JSX expressions (identifier after brace)', () => {

@@ -61,10 +61,10 @@ describe('Content Plugins', () => {
       // { followed by letter is preserved (valid JSX)
       const result1 = jsxEscapePlugin.transform('Use {placeholder} here', ctx);
       expect(result1).toBe('Use {placeholder} here');
-      
-      // { not followed by letter is escaped
+
+      // { not followed by letter is escaped using HTML entities
       const result2 = jsxEscapePlugin.transform('Use { } here', ctx);
-      expect(result2).toContain('\\{');
+      expect(result2).toContain('&#123;'); // HTML entity for {
     });
 
     it('should preserve code blocks', () => {

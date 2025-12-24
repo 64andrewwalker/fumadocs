@@ -27,8 +27,9 @@ export function escapeJsxInTable(text: string): string {
   // Only preserve clear HTML tags (like <strong>, </em>, <a href>)
   // Escape all other < characters (like <16, <something not followed by valid tag name)
   processed = processed.replace(/<(?![a-zA-Z][a-zA-Z0-9]*[\s>\/]|\/[a-zA-Z])/g, '&lt;');
-  processed = processed.replace(/{/g, '\\{');
-  processed = processed.replace(/}/g, '\\}');
+  // Use HTML entities for curly braces to avoid MDX Unicode escape issues
+  processed = processed.replace(/{/g, '&#123;');
+  processed = processed.replace(/}/g, '&#125;');
 
   // Restore inline code
   codeSegments.forEach((segment, index) => {
@@ -74,18 +75,30 @@ export function escapeJsxInNonCodeText(text: string): string {
     return `__PROTECTED_${protectedSegments.length - 1}__`;
   });
 
-  // Convert HTML comments to MDX comment format
-  // <!-- comment --> becomes {/* comment */}
-  processed = processed.replace(/<!--([\s\S]*?)-->/g, '{/* $1 */}');
-  
+  // Protect HTML comments - will be converted to MDX format at the end
+  // We need to protect them BEFORE escaping < characters
+  const htmlComments: string[] = [];
+  processed = processed.replace(/<!--([\s\S]*?)-->/g, (match, content) => {
+    htmlComments.push(content);
+    return `__HTML_COMMENT_${htmlComments.length - 1}__`;
+  });
+
   // Escape < not followed by letter (invalid JSX tag start)
   // MDX requires tag names to start with a letter, so <3 <> <= etc need escaping
   processed = processed.replace(/<(?![a-zA-Z_/])/g, '&lt;');
-  
-  // Escape standalone { and } (not JSX expressions)
-  // Match { not followed by letter or newline
-  processed = processed.replace(/{(?![a-zA-Z_$])/g, '\\{');
-  processed = processed.replace(/(?<![a-zA-Z0-9_$])}/g, '\\}');
+
+  // Escape standalone { and } (not JSX expressions or MDX comments)
+  // Use HTML entities instead of backslash to avoid MDX Unicode escape issues
+  // Match { not followed by letter, slash (for comments), or *
+  processed = processed.replace(/{(?![a-zA-Z_$/*])/g, '&#123;');
+  // Match } not preceded by letter, number, $, *, or / (for comment end */)
+  processed = processed.replace(/(?<![a-zA-Z0-9_$*/])}/g, '&#125;');
+
+  // Convert protected HTML comments to MDX comment format
+  // <!-- comment --> becomes {/* comment */}
+  htmlComments.forEach((content, index) => {
+    processed = processed.replace(`__HTML_COMMENT_${index}__`, `{/* ${content} */}`);
+  });
 
   // Restore protected content
   protectedSegments.forEach((segment, index) => {
