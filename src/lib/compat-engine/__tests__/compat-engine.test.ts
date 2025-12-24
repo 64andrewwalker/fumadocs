@@ -177,7 +177,8 @@ describe('TC-13-17: MDX Preprocessing', () => {
     });
     const page = source.getPage(['table-with-special']);
     expect(page).toBeDefined();
-    expect(page?.content).toContain('\\{');
+    // Uses HTML entities instead of backslash to avoid MDX Unicode escape issues
+    expect(page?.content).toContain('&#123;'); // HTML entity for {
   });
 
   it('should preserve valid HTML tags', async () => {
@@ -345,7 +346,7 @@ describe('P3-2: Folder Hierarchy', () => {
       dir: path.join(fixturesDir, 'with-nested'),
       baseUrl: '/docs',
     });
-    
+
     // Should have folders in the tree
     const hasFolder = source.pageTree.children.some(
       (child) => child.type === 'folder'
@@ -358,12 +359,12 @@ describe('P3-2: Folder Hierarchy', () => {
       dir: path.join(fixturesDir, 'with-nested'),
       baseUrl: '/docs',
     });
-    
+
     // Find the guides folder
     const guidesFolder = source.pageTree.children.find(
       (child) => child.type === 'folder' && child.name === 'Guides Overview'
     );
-    
+
     // Folder should exist and have the index page's title
     expect(guidesFolder).toBeDefined();
   });
@@ -373,7 +374,7 @@ describe('P3-2: Folder Hierarchy', () => {
       dir: path.join(fixturesDir, 'with-nested'),
       baseUrl: '/docs',
     });
-    
+
     // Check that folder names are properly formatted
     expect(source.pageTree.name).toBe('Documents');
   });
@@ -636,7 +637,7 @@ describe('Content Completeness', () => {
     // with-bom, html-tags, task-list, frontmatter-valid
     // Should NOT have: .hidden-file, _draft-file
     expect(pages.length).toBeGreaterThanOrEqual(7);
-    
+
     // Check specific files exist
     const filePaths = pages.map(p => path.basename(p.filePath));
     expect(filePaths).toContain('visible-file.md');
@@ -667,7 +668,7 @@ describe('Deep Nested Directories', () => {
     });
     // Should have nested folder structure
     expect(source.pageTree.children.length).toBeGreaterThan(0);
-    
+
     // First level should be 'a' folder
     const aFolder = source.pageTree.children.find(
       c => c.type === 'folder' && c.name === 'A'
@@ -1176,15 +1177,15 @@ describe('Custom Ignore Patterns', () => {
 describe('Performance', () => {
   it('should process edge-cases directory in reasonable time', async () => {
     const startTime = performance.now();
-    
+
     const source = await createCompatSource({
       dir: path.join(fixturesDir, 'edge-cases'),
       baseUrl: '/test',
     });
-    
+
     const endTime = performance.now();
     const duration = endTime - startTime;
-    
+
     // Should complete in under 500ms for edge-cases directory
     expect(duration).toBeLessThan(500);
     expect(source.getPages().length).toBeGreaterThan(0);
@@ -1192,15 +1193,15 @@ describe('Performance', () => {
 
   it('should process nested directories efficiently', async () => {
     const startTime = performance.now();
-    
+
     const source = await createCompatSource({
       dir: path.join(fixturesDir, 'deep-nested'),
       baseUrl: '/test',
     });
-    
+
     const endTime = performance.now();
     const duration = endTime - startTime;
-    
+
     // Should complete in under 200ms for nested directory
     expect(duration).toBeLessThan(200);
   });
@@ -1210,11 +1211,11 @@ describe('Performance', () => {
       dir: path.join(fixturesDir, 'edge-cases'),
       baseUrl: '/test',
     });
-    
+
     const startTime = performance.now();
     const params = source.generateParams();
     const endTime = performance.now();
-    
+
     // Param generation should be nearly instant
     expect(endTime - startTime).toBeLessThan(10);
     expect(params.length).toBeGreaterThan(0);
@@ -1222,33 +1223,33 @@ describe('Performance', () => {
 
   it('should build page tree quickly', async () => {
     const startTime = performance.now();
-    
+
     const source = await createCompatSource({
       dir: path.join(fixturesDir, 'with-nested'),
       baseUrl: '/test',
     });
-    
+
     // Page tree is built during source creation
     expect(source.pageTree).toBeDefined();
-    
+
     const endTime = performance.now();
     const duration = endTime - startTime;
-    
+
     // Should complete in under 100ms
     expect(duration).toBeLessThan(100);
   });
 
   it('should handle empty directory without delay', async () => {
     const startTime = performance.now();
-    
+
     const source = await createCompatSource({
       dir: path.join(fixturesDir, 'empty-dir'),
       baseUrl: '/test',
     });
-    
+
     const endTime = performance.now();
     const duration = endTime - startTime;
-    
+
     // Empty directory should be instant
     expect(duration).toBeLessThan(50);
     expect(source.getPages()).toHaveLength(0);
