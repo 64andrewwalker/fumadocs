@@ -74,6 +74,32 @@ docs-site/
 └── ...
 ```
 
+## Environment Variables
+
+### Compat Engine Configuration
+
+The Compat Engine (for rendering non-standard markdown files) can be configured via environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `COMPAT_SOURCE_DIR` | Directory path for compat source | `DocEngineering` |
+| `COMPAT_SOURCE_ENABLED` | Enable/disable compat engine | `true` |
+
+**Examples:**
+
+```bash
+# Disable compat engine entirely
+COMPAT_SOURCE_ENABLED=false ./scripts/preview-local.sh ../my-docs
+
+# Use custom compat source directory
+COMPAT_SOURCE_DIR=/path/to/my-notes ./scripts/preview-local.sh ../my-docs
+
+# Combined with other options
+COMPAT_SOURCE_DIR=./my-notes ./scripts/preview-local.sh ../my-docs 3001
+```
+
+**Note:** If the `COMPAT_SOURCE_DIR` directory doesn't exist, the Compat Engine will gracefully return an empty source (no `/raw-notes` pages will be available).
+
 ## Requirements
 
 ### preview-local.sh

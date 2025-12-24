@@ -81,7 +81,15 @@ export default async function Page({ params }: PageProps) {
 
 export async function generateStaticParams() {
   const source = await getRawSource();
-  return source.generateParams();
+  const params = source.generateParams();
+  
+  // 确保至少返回根路径，以满足静态导出要求
+  // 当 compat source 为空时，仍然生成 /raw-notes 页面
+  if (params.length === 0) {
+    return [{ slug: [] }];
+  }
+  
+  return params;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
