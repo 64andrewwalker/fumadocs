@@ -29,6 +29,8 @@ export type {
   MetadataPlugin,
   ScannerPlugin,
   TreePlugin,
+  PluginsConfig,
+  PluginOverride,
 } from './types';
 
 // Plugins
@@ -52,6 +54,7 @@ export {
 
 // Core utilities
 export { buildPageTree, flattenEmptyFolders } from './core/page-builder';
+export { mergeContentPlugins, mergeMetadataPlugins } from './core/plugin-merger';
 
 // Utilities
 export { shouldIncludeFile, matchesPattern } from './utils/patterns';

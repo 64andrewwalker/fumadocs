@@ -16,33 +16,27 @@
 
 ```
 src/lib/compat-engine/
-├── index.ts              # 主入口，导出 createCompatSource
-├── types.ts              # ✅ 已有 - 核心类型定义
-├── define.ts             # ✅ 已有 - 插件定义辅助函数
-├── create-source.ts      # 新建 - createCompatSource 核心逻辑
+├── index.ts              # 主入口，导出所有公共 API (63 行)
+├── types.ts              # ✅ 核心类型定义
+├── define.ts             # ✅ 插件定义辅助函数
+├── create-source.ts      # ✅ createCompatSource 核心逻辑
 ├── core/
-│   ├── pipeline.ts       # ✅ 已有 - 插件管道执行器
-│   ├── scanner.ts        # 新建 - 文件扫描器
-│   └── page-builder.ts   # 新建 - 页面构建器
+│   ├── pipeline.ts       # ✅ 插件管道执行器
+│   ├── page-builder.ts   # ✅ 页面树构建器
+│   └── plugin-merger.ts  # ✅ 插件合并工具 (Phase 7)
 ├── plugins/
 │   ├── scanner/
-│   │   └── index.ts      # ✅ 已有 - 扫描器插件
-│   ├── preprocessor/     # 新建
-│   │   ├── index.ts      # 导出所有预处理插件
-│   │   ├── html-comments.ts    # HTML 注释转换
-│   │   ├── jsx-escape.ts       # JSX 字符转义
-│   │   ├── code-protection.ts  # 代码块保护
-│   │   └── link-transform.ts   # 链接转换
-│   ├── metadata/         # 新建
-│   │   ├── index.ts      # 导出所有元数据插件
-│   │   ├── title-extractor.ts      # 标题提取
-│   │   └── description-extractor.ts # 描述提取
-│   └── tree/             # 新建
-│       ├── index.ts      # 导出所有树插件
-│       └── flatten-empty.ts  # 空文件夹展平
+│   │   └── index.ts      # ✅ 扫描器插件
+│   ├── content/          # ✅ 内容转换插件 (原 preprocessor)
+│   │   └── index.ts      # jsxEscape, linkTransform, imageTransform, markdownPreprocess
+│   └── metadata/         # ✅ 元数据提取插件
+│       └── index.ts      # frontmatter, titleFromH1, descriptionFromParagraph, titleFromFilename
+├── preprocessor/
+│   └── index.ts          # ✅ 底层预处理函数
 └── utils/
-    ├── patterns.ts       # 模式匹配工具
-    └── slug.ts           # Slug 生成工具
+    ├── index.ts          # ✅ 工具函数导出
+    ├── patterns.ts       # ✅ 模式匹配工具
+    └── slug.ts           # ✅ Slug 生成工具
 ```
 
 ## 重构阶段
@@ -52,6 +46,7 @@ src/lib/compat-engine/
 **目标**：将通用工具函数提取到 `utils/` 目录
 
 **步骤**：
+
 1. 创建 `utils/patterns.ts`
    - `matchesPattern(path, pattern)` - 路径匹配
    - `shouldIncludeFile(path, ignore, include)` - 文件包含判断
@@ -61,6 +56,7 @@ src/lib/compat-engine/
    - `isIndexFile(fileName)` - 索引文件判断
 
 **测试**：
+
 - 现有测试应继续通过
 - 添加工具函数的单元测试
 
@@ -69,7 +65,9 @@ src/lib/compat-engine/
 **目标**：将预处理逻辑拆分为独立插件
 
 **步骤**：
+
 1. 定义 `ContentPreprocessorPlugin` 接口
+
    ```typescript
    interface ContentPreprocessorPlugin {
      name: string;
@@ -92,6 +90,7 @@ src/lib/compat-engine/
    - `imageTransformPlugin` - 图片路径转换
 
 3. 创建 `core/preprocessor-pipeline.ts`
+
    ```typescript
    function runPreprocessorPipeline(
      plugins: ContentPreprocessorPlugin[],
@@ -101,6 +100,7 @@ src/lib/compat-engine/
    ```
 
 **测试**：
+
 - 为每个预处理器插件添加单元测试
 - 测试插件组合和优先级
 
@@ -109,7 +109,9 @@ src/lib/compat-engine/
 **目标**：将元数据提取逻辑拆分为独立插件
 
 **步骤**：
+
 1. 定义 `MetadataExtractorPlugin` 接口
+
    ```typescript
    interface MetadataExtractorPlugin {
      name: string;
@@ -132,6 +134,7 @@ src/lib/compat-engine/
 3. 创建 `core/metadata-pipeline.ts`
 
 **测试**：
+
 - 测试各种元数据组合场景
 - 测试优先级覆盖（frontmatter > H1 > 文件名）
 
@@ -140,11 +143,13 @@ src/lib/compat-engine/
 **目标**：将页面树构建逻辑拆分
 
 **步骤**：
+
 1. 创建 `core/page-builder.ts`
    - `buildPageTree(pages, options)` - 构建页面树
    - `flattenEmptyFolders(tree)` - 展平空文件夹
 
 2. 定义 `TreeTransformPlugin` 接口（可选）
+
    ```typescript
    interface TreeTransformPlugin {
      name: string;
@@ -153,6 +158,7 @@ src/lib/compat-engine/
    ```
 
 **测试**：
+
 - 测试各种目录结构
 - 测试空文件夹展平
 
@@ -161,7 +167,9 @@ src/lib/compat-engine/
 **目标**：使用插件管道重写主函数
 
 **步骤**：
+
 1. 创建 `create-source.ts`
+
    ```typescript
    interface CompatSourceConfig {
      options: CompatSourceOptions;
@@ -196,6 +204,7 @@ src/lib/compat-engine/
    ```
 
 2. 更新 `index.ts` 导出
+
    ```typescript
    export { createCompatSource } from './create-source';
    export * from './types';
@@ -206,6 +215,7 @@ src/lib/compat-engine/
    ```
 
 3. 提供默认插件配置
+
    ```typescript
    export const defaultScannerPlugins = [
      extensionFilterPlugin,
@@ -222,6 +232,7 @@ src/lib/compat-engine/
    ```
 
 **测试**：
+
 - 所有现有测试应继续通过
 - 测试自定义插件配置
 - 测试插件覆盖
@@ -231,6 +242,7 @@ src/lib/compat-engine/
 **目标**：更新文档，清理旧代码
 
 **步骤**：
+
 1. 更新 PRD 文档
 2. 添加插件开发指南
 3. 添加 API 文档注释
@@ -252,14 +264,17 @@ src/lib/compat-engine/
 ## 风险与缓解
 
 ### 风险 1: 回归问题
+
 - **缓解**：每个阶段后运行完整测试套件
 - **缓解**：保持旧实现直到新实现完全验证
 
 ### 风险 2: 接口变更
+
 - **缓解**：保持 `createCompatSource` 的公开 API 不变
 - **缓解**：使用默认插件配置保持向后兼容
 
 ### 风险 3: 性能回归
+
 - **缓解**：添加性能基准测试
 - **缓解**：插件管道使用同步调用减少开销
 
@@ -297,18 +312,41 @@ src/lib/compat-engine/
 | Phase 2: 预处理器插件 | ✅ 完成 | `plugins/content/index.ts` |
 | Phase 3: 元数据插件 | ✅ 完成 | `plugins/metadata/index.ts` |
 | Phase 4: 页面树构建 | ✅ 完成 | `core/page-builder.ts` |
-| Phase 5: 重写主函数 | ✅ 完成 | `create-source.ts`, `index.ts` (59 行) |
+| Phase 5: 重写主函数 | ✅ 完成 | `create-source.ts`, `index.ts` (63 行) |
 | Phase 6: 文档清理 | ✅ 完成 | 本文档更新 |
+| Phase 7: 自定义插件支持 | ✅ 完成 | `core/plugin-merger.ts`, `options.plugins` |
 
 ### 最终结果
 
-- **测试**: 321 个测试全部通过
-- **index.ts**: 从 ~790 行减少到 59 行 (92% 减少)
-- **模块化**: 15 个独立模块，各司其职
+- **测试**: 339 个测试全部通过
+- **index.ts**: 从 ~790 行减少到 63 行 (92% 减少)
+- **模块化**: 17 个独立模块，各司其职
 - **E2E 验证**: DocEngineering 目录正常渲染
+- **自定义插件**: 支持添加、替换、禁用插件
+
+### Phase 7: 自定义插件支持 (TDD 补充)
+
+**目标**：完善 `options.plugins` 配置的运行时支持
+
+**实现**：
+
+1. 创建 `core/plugin-merger.ts`
+   - `mergeContentPlugins(defaults, customs)` - 合并内容插件
+   - `mergeMetadataPlugins(defaults, customs)` - 合并元数据插件
+
+2. 更新 `create-source.ts`
+   - 从 `options.plugins` 读取自定义配置
+   - 调用合并函数整合默认与自定义插件
+
+**支持功能**：
+
+- ✅ 添加新插件
+- ✅ 替换同名插件
+- ✅ 通过 `{ name: 'xxx', enabled: false }` 禁用插件
+- ✅ 按优先级排序
 
 ---
 
 *计划日期: 2024-12-24*
 *完成日期: 2024-12-24*
-
+*增补日期: 2024-12-24 (Phase 7)*

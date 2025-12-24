@@ -8,12 +8,13 @@
 import fs from 'fs/promises';
 import path from 'path';
 import matter from 'gray-matter';
-import type { CompatSourceOptions, CompatSource, RawPage, PageMetadata, PluginContext } from './types';
+import type { CompatSourceOptions, CompatSource, RawPage, PageMetadata, PluginContext, ContentPlugin, MetadataPlugin } from './types';
 
 // Plugins
 import { runContentPipeline, defaultContentPlugins } from './plugins/content';
 import { runMetadataPipeline, defaultMetadataPlugins } from './plugins/metadata';
 import { buildPageTree } from './core/page-builder';
+import { mergeContentPlugins, mergeMetadataPlugins } from './core/plugin-merger';
 import { shouldIncludeFile } from './utils/patterns';
 import { filePathToSlugs, isIndexFile } from './utils/slug';
 
@@ -49,7 +50,16 @@ export async function createCompatSource(options: CompatSourceOptions): Promise<
     preprocessor,
     titleExtractor,
     descriptionExtractor,
+    plugins = {},
   } = options;
+
+  // Merge custom plugins with defaults
+  const contentPlugins: ContentPlugin[] = plugins.content
+    ? mergeContentPlugins(defaultContentPlugins, plugins.content)
+    : defaultContentPlugins;
+  const metadataPlugins: MetadataPlugin[] = plugins.metadata
+    ? mergeMetadataPlugins(defaultMetadataPlugins, plugins.metadata)
+    : defaultMetadataPlugins;
 
   // Resolve absolute path
   const absoluteDir = path.isAbsolute(dir) ? dir : path.join(process.cwd(), dir);
@@ -108,7 +118,7 @@ export async function createCompatSource(options: CompatSourceOptions): Promise<
     };
 
     // Generate slugs
-    const slugs = filePathToSlugs(file, indexFiles);
+    const slugs = filePathToSlugs(file);
     const slugKey = slugs.join('/') || 'index';
 
     // Check for conflicts
@@ -137,8 +147,8 @@ export async function createCompatSource(options: CompatSourceOptions): Promise<
         description: (frontmatter.description as string) || descriptionExtractor?.(rawContent, filePath) || '',
       };
     } else {
-      // Plugin mode
-      metadata = await runMetadataPipeline(defaultMetadataPlugins, initialMetadata, rawContent, context);
+      // Plugin mode - use merged plugins
+      metadata = await runMetadataPipeline(metadataPlugins, initialMetadata, rawContent, context);
     }
 
     // Process content using plugins
@@ -149,9 +159,9 @@ export async function createCompatSource(options: CompatSourceOptions): Promise<
       processedContent = preprocessor(processedContent, filePath);
     }
 
-    // Run content plugins (only link and image transform need special handling)
-    // The markdownPreprocess and jsxEscape plugins are included in default
-    processedContent = await runContentPipeline(defaultContentPlugins, processedContent, context);
+    // Run content plugins - use merged plugins
+    // Custom plugins are merged with defaults and sorted by priority
+    processedContent = await runContentPipeline(contentPlugins, processedContent, context);
 
     // Create page
     pages.set(slugKey, {
