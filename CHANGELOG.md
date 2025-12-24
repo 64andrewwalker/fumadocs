@@ -7,24 +7,101 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- `indexFiles` configuration option - customize which files are treated as index pages ✓ verified
-- `ignore` configuration option - customize file ignore patterns with glob support ✓ verified
-- `matchesIgnorePattern()` helper function for pattern matching ✓ verified
-- `createIndexFileChecker()` for customizable index file detection ✓ verified
-- 3 new test cases for ignore pattern functionality ✓ verified
+<!-- Future changes go here -->
 
-### Changed
-- Moved scripts to `scripts/` directory ✓ verified
-  - `preview-docs.sh` → `scripts/preview-docker.sh`
-  - `docker-entrypoint.sh` → `scripts/docker-entrypoint.sh`
-- Added `scripts/preview-local.sh` for running without Docker ✓ verified
-- Updated Dockerfile to reference new script paths ✓ verified
-- Added npm scripts: `preview` and `preview:docker` ✓ verified
+---
 
-### Documentation
-- Added `scripts/README.md` with usage documentation ✓ verified
-- Added `docs/sync-audit-report.md` - documentation-code sync audit ✓ verified
+## [0.2.0] - 2024-12-24
+
+### 🏗️ Major Refactoring: Modular Plugin Architecture
+
+This release introduces a complete architectural overhaul of the Compat Engine, transforming it from a monolithic design (~790 lines in `index.ts`) to a modular, plugin-based architecture (63 lines in `index.ts`).
+
+### ✨ Added
+
+#### Custom Plugin System
+
+- **Plugin Configuration** - Pass custom plugins via `options.plugins` ✓ verified
+- **Plugin Override** - Replace or disable default plugins by name ✓ verified
+- **Plugin Merging** - Custom plugins merge with defaults and sort by priority ✓ verified
+- `mergeContentPlugins()` - Utility for merging content plugins ✓ verified
+- `mergeMetadataPlugins()` - Utility for merging metadata plugins ✓ verified
+
+```typescript
+// Example: Add custom plugin and disable default
+const source = await createCompatSource({
+  dir: 'docs',
+  baseUrl: '/docs',
+  plugins: {
+    content: [
+      customMarkerPlugin,
+      { name: 'link-transform', enabled: false },
+    ],
+  },
+});
+```
+
+#### New Exports
+
+- `PluginsConfig` type - Configuration for custom plugins ✓ verified
+- `PluginOverride` type - Override or disable plugins ✓ verified
+- `mergeContentPlugins()` function ✓ verified
+- `mergeMetadataPlugins()` function ✓ verified
+
+### 🔧 Changed
+
+#### Modular Architecture (Phase 1-6)
+
+- **Phase 1**: Extracted utility functions to `utils/patterns.ts` and `utils/slug.ts`
+- **Phase 2**: Created content plugins in `plugins/content/index.ts`
+  - `jsxEscapePlugin` - JSX character escaping
+  - `linkTransformPlugin` - Relative link transformation
+  - `imageTransformPlugin` - Image path handling
+  - `markdownPreprocessPlugin` - Code block protection
+- **Phase 3**: Created metadata plugins in `plugins/metadata/index.ts`
+  - `frontmatterPlugin` - Frontmatter extraction
+  - `titleFromH1Plugin` - Title from first heading
+  - `titleFromFilenamePlugin` - Title from filename fallback
+  - `descriptionFromParagraphPlugin` - Description from first paragraph
+- **Phase 4**: Extracted `buildPageTree` and `flattenEmptyFolders` to `core/page-builder.ts`
+- **Phase 5**: Rewrote `create-source.ts` to orchestrate plugin pipelines
+- **Phase 6**: Reduced `index.ts` to exports only (63 lines, 92% reduction)
+
+### 🐛 Fixed
+
+- **MDX Unicode Escape Error** - Fixed parsing error "Expecting Unicode escape sequence \uXXXX" ✓ verified
+  - Changed curly brace escaping from `\{` to HTML entities `&#123;`
+  - This ensures MDX parser doesn't confuse backslash with Unicode escape
+- **HTML Comment Conversion** - Fixed HTML comments being incorrectly escaped ✓ verified
+  - Protect HTML comments before escaping, then convert to MDX format
+
+### 📊 Testing
+
+- **339 tests** (all passing) - up from 91 in v0.1.0
+- **13 test files** covering all modules
+- **TDD development** for all new features
+- Full E2E validation with DocEngineering content
+
+### 📁 New File Structure
+
+```text
+src/lib/compat-engine/
+├── index.ts              # Main entry (63 lines)
+├── types.ts              # Core types
+├── create-source.ts      # Factory function
+├── core/
+│   ├── pipeline.ts       # Plugin pipeline
+│   ├── page-builder.ts   # Page tree building
+│   └── plugin-merger.ts  # Plugin merging utility
+├── plugins/
+│   ├── content/index.ts  # Content transformation plugins
+│   ├── metadata/index.ts # Metadata extraction plugins
+│   └── scanner/index.ts  # File scanning plugins
+├── preprocessor/index.ts # Low-level preprocessing
+└── utils/
+    ├── patterns.ts       # File pattern matching
+    └── slug.ts           # Slug generation
+```
 
 ---
 
@@ -33,6 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Core Engine
+
 - **Compat Engine** - Compatibility layer for raw markdown files ✓ verified
 - Automatic metadata extraction (title from H1, description from first paragraph) ✓ verified
 - MDX preprocessing (JSX-safe character escaping) ✓ verified
@@ -46,6 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-level folder hierarchy support ✓ verified
 
 #### Plugin Support
+
 - Math formula support (remark-math + rehype-katex) ✓ verified
 - GFM extensions (tables, task lists, strikethrough, autolinks) ✓ verified
 - Footnotes (via remark-gfm) ✓ verified
@@ -53,6 +132,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Code syntax highlighting (12+ languages) ✓ verified
 
 #### Configuration Options
+
 - `dir` - Content directory path ✓ verified
 - `baseUrl` - URL base path ✓ verified
 - `extensions` - File extensions to process ✓ verified
@@ -64,16 +144,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `preprocessor` - Custom content preprocessing ✓ verified
 
 ### Testing
+
 - 91 test cases (all passing) ✓ verified
 - 28 fixture files ✓ verified
 - Performance benchmarks ✓ verified
 
 ### Documentation
+
 - PRD (Product Requirements Document) ✓ verified
 - TDD Session Log ✓ verified
 - Self-Review Report ✓ verified
 
 ### Dependencies
+
 - fumadocs-core 16.3.2
 - fumadocs-mdx 14.2.2
 - fumadocs-ui 16.3.2
@@ -88,6 +171,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/64andrewwalker/fumadocs/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/64andrewwalker/fumadocs/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/64andrewwalker/fumadocs/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/64andrewwalker/fumadocs/releases/tag/v0.1.0
-
