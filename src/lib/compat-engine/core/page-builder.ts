@@ -171,3 +171,4 @@ export function flattenEmptyFolders(node: { children: any[] }): void {
   }
 }
 
+

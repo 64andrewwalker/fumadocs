@@ -284,3 +284,4 @@ export function isTreePlugin(value: TreePlugin | PluginOverride): value is TreeP
   return 'transform' in value && typeof value.transform === 'function' && !('priority' in value && value.priority === undefined);
 }
 
+

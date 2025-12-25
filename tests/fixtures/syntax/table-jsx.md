@@ -6,3 +6,4 @@
 | Capacitor | {value}μF |
 | Transistor | <Component /> |
 
+
