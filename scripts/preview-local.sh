@@ -21,8 +21,10 @@
 #   ./scripts/preview-local.sh ../calvin/docs-content
 #   ./scripts/preview-local.sh ../calvin/docs-site 3001
 #
-# Note: This script copies files instead of symlinking because
-# Next.js Turbopack doesn't support symlinks outside the project root.
+# Note: This script copies files (using rsync) instead of symlinking
+# because Next.js Turbopack doesn't support symlinks outside the 
+# project root. The content/ directory is in .gitignore so this
+# doesn't affect git tracking.
 # ============================================================
 
 set -e
@@ -32,8 +34,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Project root is one level up
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Default content path
-CONTENT_PATH="${1:-$PROJECT_ROOT/content}"
+# Default content path (use templates if no argument)
+CONTENT_PATH="${1:-$PROJECT_ROOT/templates/content}"
 PREFERRED_PORT="${2:-3000}"
 
 # Convert to absolute path if relative
@@ -111,17 +113,8 @@ cd "$PROJECT_ROOT"
 
 CONTENT_DIR="$PROJECT_ROOT/content"
 
-# Backup existing content if it's not a symlink and not already backed up
-if [ -d "$CONTENT_DIR" ] && [ ! -L "$CONTENT_DIR" ] && [ ! -d "$PROJECT_ROOT/content.bak" ]; then
-    echo "📦 Backing up existing content to content.bak..."
-    mv "$CONTENT_DIR" "$PROJECT_ROOT/content.bak"
-fi
-
-# Remove any existing symlink or directory
-if [ -L "$CONTENT_DIR" ]; then
-    rm "$CONTENT_DIR"
-fi
-if [ -d "$CONTENT_DIR" ]; then
+# Remove existing content (it's in .gitignore, so safe to delete)
+if [ -d "$CONTENT_DIR" ] || [ -L "$CONTENT_DIR" ]; then
     rm -rf "$CONTENT_DIR"
 fi
 
@@ -158,7 +151,7 @@ sync_content() {
             --include='_home.mdx' \
             --exclude='*' \
             "$CONTENT_PATH/" "$CONTENT_DIR/"
-        echo "📁 Copied content: $CONTENT_PATH -> $CONTENT_DIR"
+        echo "📁 Synced content: $CONTENT_PATH -> $CONTENT_DIR"
     else
         # Legacy mode: create content/docs structure
         mkdir -p "$CONTENT_DIR/docs"
@@ -186,7 +179,7 @@ sync_content() {
             --include='*.ico' \
             --exclude='*' \
             "$DOCS_PATH/" "$CONTENT_DIR/docs/"
-        echo "📁 Copied docs: $DOCS_PATH -> $CONTENT_DIR/docs"
+        echo "📁 Synced docs: $DOCS_PATH -> $CONTENT_DIR/docs"
     fi
 }
 
@@ -203,15 +196,10 @@ cleanup() {
         kill "$WATCHER_PID" 2>/dev/null || true
     fi
     
-    # Remove copied content
+    # Remove copied content (it's in .gitignore)
     if [ -d "$CONTENT_DIR" ]; then
         rm -rf "$CONTENT_DIR"
-    fi
-    
-    # Restore backup if exists
-    if [ -d "$PROJECT_ROOT/content.bak" ]; then
-        mv "$PROJECT_ROOT/content.bak" "$CONTENT_DIR"
-        echo "📦 Restored original content directory"
+        echo "📦 Removed preview content"
     fi
 }
 
@@ -223,6 +211,10 @@ if [ ! -d "$PROJECT_ROOT/node_modules" ]; then
     echo "📦 Installing dependencies..."
     pnpm install
 fi
+
+# Clear caches to ensure fresh build with new content
+echo "🧹 Clearing build caches..."
+rm -rf .next .source
 
 # Start file watcher for live sync (if fswatch is available)
 if command -v fswatch &> /dev/null; then
