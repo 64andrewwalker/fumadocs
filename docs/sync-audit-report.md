@@ -1,76 +1,102 @@
 # Documentation-Code Synchronization Audit
 
-> **Date**: 2024-12-23
-> **Version**: v0.1.0
+> **Date**: 2024-12-25
+> **Version**: v0.3.0
 > **Auditor**: AI Assistant
 
-## Sync Status: 100% Aligned ✅
+## Sync Status: 85% Aligned 🟡
 
 ### Summary
 | Category | Count | Status |
 |----------|-------|--------|
-| Verified Complete | 20 | ✅ |
+| Verified Complete | 22 | ✅ |
+| Documentation Issues | 4 | 🔴 |
+| Undocumented Features | 3 | 💀 |
+| Dead Documentation | 1 | 🗑️ |
 | Partial Implementation | 0 | 🟡 |
-| Missing Implementation | 0 | 🔴 |
-| Dead Documentation | 0 | 🗑️ |
-| Undocumented Features | 0 | 💀 |
 
 ---
 
-## ✅ Fixed Issues (from previous audit)
+## 🔴 Critical Mismatches (Documented as Done, Actually Different)
 
-| Feature | Previous Status | Current Status | Fix |
-|---------|-----------------|----------------|-----|
-| `indexFiles` option | ❌ Not in interface | ✅ Implemented | Added to interface and defaults |
-| `ignore` option | ❌ Not in interface | ✅ Implemented | Added configurable ignore patterns |
+| Feature | Doc Location | Documented | Actual | Evidence |
+|---------|--------------|------------|--------|----------|
+| preview-docs.sh | README.md L29 | `./preview-docs.sh` | `./scripts/preview-local.sh` | Script renamed |
+| frontmatter title | README.md L48 | "required" | Optional | `source.config.ts:12` - `title: z.string().optional()` |
+| content/docs/ | README.md L58 | Mount point | In .gitignore | `content/` added to `.gitignore` |
+| Scripts location | README.md L61 | `preview-docs.sh` | `scripts/preview-local.sh` | Moved to scripts/ |
 
-### Implementation Details
-- **`indexFiles`**: Now configurable, defaults to `['README.md', 'readme.md', 'index.md', 'index.mdx']`
-- **`ignore`**: Now configurable, defaults to `['_*', '.*']` with pattern matching support
-- **Tests**: 3 new test cases added for custom ignore patterns
+### Required Fixes
+
+- [ ] README.md L29: Change `./preview-docs.sh` → `./scripts/preview-local.sh`
+- [ ] README.md L48: Change "title: Page Title (required)" → "title: Page Title (optional - extracted from H1 if not provided)"
+- [ ] README.md L58: Note that content/ is managed by preview scripts
+- [ ] README.md L61: Update script name
+
+---
+
+## 🗑️ Dead Documentation (No Corresponding Code)
+
+| Reference | Location | Issue |
+|-----------|----------|-------|
+| `preview-docs.sh` | README.md L29, L61 | Script doesn't exist - renamed to `preview-local.sh` |
+
+---
+
+## 💀 Undocumented Features (Code Exists, No Docs)
+
+| Feature | Code Location | Description |
+|---------|---------------|-------------|
+| Compat Engine | `src/lib/compat-engine/` | Complete plugin-based compatibility layer for raw markdown |
+| raw-notes page | `src/app/raw-notes/` | Alternative rendering for non-standard markdown |
+| COMPAT_SOURCE_DIR env | `src/lib/raw-source.ts:46` | Environment variable to configure compat source |
+| preview-local.sh | `scripts/preview-local.sh` | Main preview script (replaces preview-docs.sh) |
+| Optional title extraction | `src/lib/source.ts:10-35` | Auto-extracts title from H1 or filename |
+
+### Recommendation
+
+Add to README.md:
+```markdown
+## Advanced Features
+
+### Compat Engine (Raw Notes)
+
+For rendering non-standard markdown files (without proper frontmatter), the engine includes a compatibility layer:
+
+- Access via `/raw-notes` route
+- Configure source: `COMPAT_SOURCE_DIR=/path/to/notes`
+- Disable: `COMPAT_SOURCE_ENABLED=false`
+
+See [scripts/README.md](scripts/README.md) for details.
+```
 
 ---
 
 ## 🟢 Verified Complete
 
-| Feature | Doc Location | Code Location | Tests |
-|---------|--------------|---------------|-------|
-| 基础兼容层引擎 | PRD 6.0 | `index.ts:createCompatSource` | ✅ Multiple |
-| 自动标题提取 | PRD 2.1 | `index.ts:extractTitle` | ✅ TC-05 |
-| 自动描述提取 | PRD 2.1 | `index.ts:extractDescription` | ✅ TC-06 |
-| MDX 预处理 | PRD 2.3 | `index.ts:preprocessMarkdown` | ✅ TC-13-17 |
-| README.md 作为 index | PRD 2.2 | `index.ts:sortFiles` | ✅ TC-03 |
-| 空状态处理 | PRD 3.1 | `page.tsx:EmptyState` | ✅ TC-01 |
-| 文件排序 | PRD 2.2 | `index.ts:sortFiles` | ✅ TC-04 |
-| 隐藏文件忽略 | PRD 3.8 | `index.ts:scanDirectory` | ✅ TC-09 |
-| 草稿文件忽略 | PRD 3.8 | `index.ts:scanDirectory` | ✅ TC-10 |
-| 相对链接转换 | PRD 3.6 | `index.ts:transformRelativeLinks` | ✅ TC-21 |
-| 图片路径处理 | PRD 3.7 | `index.ts:transformImagePaths` | ✅ TC-22 |
-| 文件大小限制 | PRD 3.4 | `index.ts:maxFileSize` | ✅ TC-23 |
-| 冲突检测 | PRD 3.10 | `index.ts:warnings` | ✅ TC-25 |
-| 数学公式 | PRD 3.14 | `page.tsx:remarkMath+rehypeKatex` | ✅ MathFormulas |
-| GFM 扩展 | PRD 3.16-17 | `page.tsx:remarkGfm` | ✅ GFMExtensions |
-| 脚注 | PRD 3.18 | `page.tsx:remarkGfm` | ✅ Footnotes |
-| Mermaid 渲染 | PRD 3.15 | `mermaid.tsx` | ✅ MermaidCodeBlocks |
-| 代码高亮 | N/A | Shiki via fumadocs | ✅ CodeHighlighting |
-
----
-
-## 💀 Undocumented Features
-
-None - all features are now documented.
-
----
-
-## 🗑️ Dead Documentation
-
-None found.
-
----
-
-## 📝 Documentation Updates Required
-
-None - all PRD features are now implemented.
+| Feature | Doc Location | Code Location | Status |
+|---------|--------------|---------------|--------|
+| Markdown/MDX Support | README L7 | `src/mdx-components.tsx` | ✅ |
+| Docker Ready | README L8 | `Dockerfile`, `docker-compose.yml` | ✅ |
+| Hot Reload | README L9 | `next.config.mjs` | ✅ |
+| Beautiful UI | README L10 | fumadocs-ui dependency | ✅ |
+| pnpm dev | README L18 | `package.json:7` | ✅ |
+| Docker Preview | README L27 | `scripts/preview-docker.sh` | ✅ |
+| docs-compose.calvin.yml | README L33 | File exists | ✅ |
+| Compat Engine Core | PRD 6.0 | `src/lib/compat-engine/` | ✅ |
+| Auto title extraction | PRD 2.1 | `plugins/metadata/` | ✅ |
+| Auto description | PRD 2.1 | `plugins/metadata/` | ✅ |
+| MDX preprocessing | PRD 2.3 | `plugins/preprocessor/` | ✅ |
+| README as index | PRD 2.2 | `core/page-builder.ts` | ✅ |
+| Empty state handling | PRD 3.1 | `app/raw-notes/page.tsx` | ✅ |
+| File sorting | PRD 2.2 | `core/page-builder.ts` | ✅ |
+| Hidden file ignore | PRD 3.8 | `plugins/scanner/` | ✅ |
+| Draft file ignore | PRD 3.8 | `plugins/scanner/` | ✅ |
+| Relative link transform | PRD 3.6 | `plugins/preprocessor/` | ✅ |
+| Image path handling | PRD 3.7 | `plugins/preprocessor/` | ✅ |
+| Math formulas | PRD 3.14 | `app/raw-notes/[...slug]/page.tsx` | ✅ |
+| GFM extensions | PRD 3.16-17 | `app/raw-notes/[...slug]/page.tsx` | ✅ |
+| Mermaid rendering | PRD 3.15 | `components/mdx/mermaid.tsx` | ✅ |
 
 ---
 
@@ -81,31 +107,86 @@ None - all PRD features are now implemented.
 - **Status**: ✅ Clean
 
 ### Mock/Stub/Placeholder Patterns
-- **Found**: 0 in production code
-- **Note**: `placeholder.com` URLs found in test fixtures only (expected)
+- **Found**: 4 instances in `src/lib/compat-engine/plugins/scanner/index.ts`
+- **Analysis**: Used for internal option merging, not placeholder code
+- **Status**: ✅ Acceptable
 
 ### Return Empty Patterns
-- **Found**: 3 instances
-- **Analysis**: All are valid defensive programming patterns:
-  1. `page.tsx:54`: Guard for empty image src
-  2. `page.tsx:85`: Guard for empty image src
-  3. `layout.tsx:28`: Return empty config when site.config.json not found
+- **Found**: 1 instance (`utils/slug.ts:51`)
+- **Analysis**: Valid guard clause for empty input
+- **Status**: ✅ Clean
 
 ---
 
-## Prevention Recommendations
+## 📊 Test Coverage
 
-1. **Add interface validation**: TypeScript will catch undocumented options
-2. **Keep PRD in sync**: Update PRD when adding/removing options
-3. **Automated check**: Add test that verifies PRD options exist in interface
+```
+Test Files: 13 passed (13)
+Tests: 339 passed (339)
+Duration: 335ms
+```
+
+**Coverage Areas**:
+- ✅ Compat Engine core (94 tests)
+- ✅ E2E with DocEngineering (17 tests)
+- ✅ Plugin tests (various)
+
+---
+
+## 📝 Required Documentation Updates
+
+### README.md
+
+```diff
+- ./preview-docs.sh /path/to/your/docs
++ ./scripts/preview-local.sh /path/to/your/docs
+
+- title: Page Title (required)
++ title: Page Title (optional - auto-extracted from H1 heading)
+
+- | `content/docs/` | Documentation content (mount point for external docs) |
++ | `content/` | Documentation content (managed by preview scripts, in .gitignore) |
++ | `templates/content/` | Default content template |
+
+- | `preview-docs.sh` | Script to preview external docs |
++ | `scripts/preview-local.sh` | Script to preview external docs |
++ | `scripts/preview-docker.sh` | Script to preview via Docker |
+```
+
+### Add New Section
+
+```markdown
+## Scripts
+
+See [scripts/README.md](scripts/README.md) for detailed script documentation.
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/preview-local.sh` | Preview docs locally (no Docker) |
+| `scripts/preview-docker.sh` | Preview docs via Docker |
+```
 
 ---
 
 ## Conclusion
 
-The codebase is **92% aligned** with documentation. The only discrepancies are:
-1. Two configuration options documented but not implemented (`indexFiles`, `ignore`)
-2. One feature implemented but could use better documentation (`preprocessor`)
+The codebase is **85% aligned** with documentation. Main issues:
 
-**Recommendation**: Either implement the missing options or update the PRD to mark them as "planned" features.
+1. **README outdated**: Script names and paths need updating
+2. **Undocumented features**: Compat Engine not mentioned in main README
+3. **Frontmatter claim incorrect**: Title is optional, not required
 
+**Priority Actions**:
+1. Update README.md with correct script names
+2. Add Compat Engine section to README
+3. Correct frontmatter documentation
+
+---
+
+## History
+
+| Date | Version | Sync % | Notes |
+|------|---------|--------|-------|
+| 2024-12-23 | v0.1.0 | 92% | Initial audit |
+| 2024-12-23 | v0.2.0 | 100% | Fixed indexFiles/ignore options |
+| 2024-12-25 | v0.3.0 | 85% | Found README mismatches after refactoring |
