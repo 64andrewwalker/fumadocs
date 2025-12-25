@@ -9,7 +9,7 @@ This directory contains utility scripts for the Fumadocs engine.
 Run the documentation preview server locally without Docker.
 
 ```bash
-# Default: use ./content directory
+# Default: use templates/content/ directory
 ./scripts/preview-local.sh
 
 # Custom content directory
@@ -20,10 +20,17 @@ Run the documentation preview server locally without Docker.
 ```
 
 **Features:**
-- Creates symlinks to external content directories
+- Uses `rsync` to copy content files to the project's `content/` directory
+- Supports any external directory (not limited to project subdirectories)
 - Auto-finds available port if preferred port is busy
-- Cleans up symlinks on exit
-- Restores original content directory if backed up
+- Cleans up copied content on exit
+- Does NOT affect git status (`content/` is in `.gitignore`)
+- Optional: live file sync with `fswatch` (install with `brew install fswatch`)
+
+**Technical Notes:**
+- The `content/` directory is in `.gitignore` and not tracked by git
+- Default content template is stored in `templates/content/` (tracked by git)
+- Uses rsync instead of symlinks because Next.js Turbopack doesn't support symlinks pointing outside the project root
 
 ### preview-docker.sh
 
@@ -105,8 +112,32 @@ COMPAT_SOURCE_DIR=./my-notes ./scripts/preview-local.sh ../my-docs 3001
 ### preview-local.sh
 - Node.js 18+
 - pnpm
+- rsync (pre-installed on macOS and most Linux)
+- (Optional) fswatch for live file sync: `brew install fswatch`
 
 ### preview-docker.sh
 - Docker
 - docker-compose
+
+## Troubleshooting
+
+### "Symlink points out of the filesystem root" Error
+
+This error occurs when using symlinks with Next.js Turbopack. The `preview-local.sh` script avoids this by using `rsync` to copy files instead of creating symlinks.
+
+If you see this error, make sure you're using the latest version of `preview-local.sh`.
+
+### Content Changes Not Reflecting
+
+1. **With fswatch installed:** Changes should sync automatically within a few seconds
+2. **Without fswatch:** Restart the preview script to see content changes
+
+To install fswatch on macOS:
+```bash
+brew install fswatch
+```
+
+### Port Already in Use
+
+The script automatically finds an available port. If port 3000 is busy, it will try 3001, 3002, etc.
 
