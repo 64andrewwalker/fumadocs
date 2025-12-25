@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { compileMDX } from 'next-mdx-remote/rsc';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
+import { source } from '@/lib/source';
 
 // Custom components available in homepage MDX
 const customComponents = {
@@ -127,17 +128,18 @@ const customComponents = {
   ),
 };
 
-// Default homepage content
-const defaultHomepage = `
+// Generate default homepage content dynamically based on available docs
+function getDefaultHomepage(firstDocUrl: string): string {
+  return `
 <Hero title="Welcome" subtitle="Get started by reading the documentation.">
-  <Button href="/raw-notes">Browse Documents</Button>
-  <Button href="/docs" variant="outline">Standard Docs</Button>
+  <Button href="${firstDocUrl}">Get Started</Button>
 </Hero>
 `;
+}
 
-async function renderMdxHomepage(source: string) {
+async function renderMdxHomepage(mdxSource: string) {
   const { content } = await compileMDX({
-    source,
+    source: mdxSource,
     components: customComponents,
   });
   return content;
@@ -147,13 +149,20 @@ export default async function HomePage() {
   // Check for custom homepage MDX (in content/, NOT content/docs/ to avoid fumadocs processing)
   const homepagePath = join(process.cwd(), 'content/_home.mdx');
 
-  let source = defaultHomepage;
+  // Find the first available documentation page
+  const pages = source.getPages();
+  const firstPage = pages[0];
+  const firstDocUrl = firstPage?.url || '/docs';
+
+  let mdxSource: string;
 
   if (existsSync(homepagePath)) {
-    source = readFileSync(homepagePath, 'utf-8');
+    mdxSource = readFileSync(homepagePath, 'utf-8');
+  } else {
+    mdxSource = getDefaultHomepage(firstDocUrl);
   }
 
-  const content = await renderMdxHomepage(source);
+  const content = await renderMdxHomepage(mdxSource);
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">

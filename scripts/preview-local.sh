@@ -20,6 +20,9 @@
 # Examples:
 #   ./scripts/preview-local.sh ../calvin/docs-content
 #   ./scripts/preview-local.sh ../calvin/docs-site 3001
+#
+# Note: This script copies files instead of symlinking because
+# Next.js Turbopack doesn't support symlinks outside the project root.
 # ============================================================
 
 set -e
@@ -106,52 +109,108 @@ echo ""
 # Change to project root
 cd "$PROJECT_ROOT"
 
-# Create symlinks to external content
-CONTENT_LINK="$PROJECT_ROOT/content"
+CONTENT_DIR="$PROJECT_ROOT/content"
 
-# Backup existing content if it's not a symlink
-if [ -d "$CONTENT_LINK" ] && [ ! -L "$CONTENT_LINK" ]; then
+# Backup existing content if it's not a symlink and not already backed up
+if [ -d "$CONTENT_DIR" ] && [ ! -L "$CONTENT_DIR" ] && [ ! -d "$PROJECT_ROOT/content.bak" ]; then
     echo "📦 Backing up existing content to content.bak..."
-    mv "$CONTENT_LINK" "$PROJECT_ROOT/content.bak"
+    mv "$CONTENT_DIR" "$PROJECT_ROOT/content.bak"
 fi
 
-# Create symlink based on mount mode
-if [ "$MOUNT_MODE" = "full" ]; then
-    # Full mode: link entire content directory
-    if [ -L "$CONTENT_LINK" ]; then
-        rm "$CONTENT_LINK"
-    fi
-    ln -sf "$CONTENT_PATH" "$CONTENT_LINK"
-    echo "🔗 Linked content: $CONTENT_PATH -> $CONTENT_LINK"
-else
-    # Legacy mode: create content/docs structure
-    if [ -L "$CONTENT_LINK" ]; then
-        rm "$CONTENT_LINK"
-    fi
-    mkdir -p "$CONTENT_LINK"
-    
-    # Link docs subdirectory
-    if [ -L "$CONTENT_LINK/docs" ]; then
-        rm "$CONTENT_LINK/docs"
-    fi
-    ln -sf "$DOCS_PATH" "$CONTENT_LINK/docs"
-    echo "🔗 Linked docs: $DOCS_PATH -> $CONTENT_LINK/docs"
+# Remove any existing symlink or directory
+if [ -L "$CONTENT_DIR" ]; then
+    rm "$CONTENT_DIR"
 fi
+if [ -d "$CONTENT_DIR" ]; then
+    rm -rf "$CONTENT_DIR"
+fi
+
+# Function to sync content (copy files)
+sync_content() {
+    echo "📋 Syncing content from source..."
+    
+    if [ "$MOUNT_MODE" = "full" ]; then
+        # Full mode: copy entire content directory
+        mkdir -p "$CONTENT_DIR"
+        # Use rsync to copy only content files, excluding hidden dirs like .git
+        rsync -av --delete \
+            --exclude='.git' \
+            --exclude='.git/**' \
+            --exclude='.gitignore' \
+            --exclude='.DS_Store' \
+            --exclude='node_modules' \
+            --exclude='.cursor' \
+            --exclude='.claude' \
+            --exclude='.agent' \
+            --include='*/' \
+            --include='*.md' \
+            --include='*.mdx' \
+            --include='*.yaml' \
+            --include='*.yml' \
+            --include='*.json' \
+            --include='*.png' \
+            --include='*.jpg' \
+            --include='*.jpeg' \
+            --include='*.gif' \
+            --include='*.svg' \
+            --include='*.webp' \
+            --include='*.ico' \
+            --include='_home.mdx' \
+            --exclude='*' \
+            "$CONTENT_PATH/" "$CONTENT_DIR/"
+        echo "📁 Copied content: $CONTENT_PATH -> $CONTENT_DIR"
+    else
+        # Legacy mode: create content/docs structure
+        mkdir -p "$CONTENT_DIR/docs"
+        rsync -av --delete \
+            --exclude='.git' \
+            --exclude='.git/**' \
+            --exclude='.gitignore' \
+            --exclude='.DS_Store' \
+            --exclude='node_modules' \
+            --exclude='.cursor' \
+            --exclude='.claude' \
+            --exclude='.agent' \
+            --include='*/' \
+            --include='*.md' \
+            --include='*.mdx' \
+            --include='*.yaml' \
+            --include='*.yml' \
+            --include='*.json' \
+            --include='*.png' \
+            --include='*.jpg' \
+            --include='*.jpeg' \
+            --include='*.gif' \
+            --include='*.svg' \
+            --include='*.webp' \
+            --include='*.ico' \
+            --exclude='*' \
+            "$DOCS_PATH/" "$CONTENT_DIR/docs/"
+        echo "📁 Copied docs: $DOCS_PATH -> $CONTENT_DIR/docs"
+    fi
+}
+
+# Initial sync
+sync_content
 
 # Cleanup function
 cleanup() {
     echo ""
-    echo "🧹 Cleaning up symlinks..."
-    if [ -L "$CONTENT_LINK" ]; then
-        rm "$CONTENT_LINK"
+    echo "🧹 Cleaning up..."
+    
+    # Kill file watcher if running
+    if [ -n "$WATCHER_PID" ] && kill -0 "$WATCHER_PID" 2>/dev/null; then
+        kill "$WATCHER_PID" 2>/dev/null || true
     fi
-    if [ -L "$CONTENT_LINK/docs" ]; then
-        rm -rf "$CONTENT_LINK"
+    
+    # Remove copied content
+    if [ -d "$CONTENT_DIR" ]; then
+        rm -rf "$CONTENT_DIR"
     fi
     
     # Restore backup if exists
     if [ -d "$PROJECT_ROOT/content.bak" ]; then
-        mv "$PROJECT_ROOT/content.bak" "$CONTENT_LINK"
+        mv "$PROJECT_ROOT/content.bak" "$CONTENT_DIR"
         echo "📦 Restored original content directory"
     fi
 }
@@ -165,7 +224,36 @@ if [ ! -d "$PROJECT_ROOT/node_modules" ]; then
     pnpm install
 fi
 
+# Start file watcher for live sync (if fswatch is available)
+if command -v fswatch &> /dev/null; then
+    echo "👁️  Starting file watcher for live sync..."
+    (
+        fswatch -o \
+            --exclude='\.git' \
+            --exclude='\.DS_Store' \
+            --exclude='node_modules' \
+            --include='\.md$' \
+            --include='\.mdx$' \
+            --include='\.yaml$' \
+            --include='\.yml$' \
+            --include='\.json$' \
+            --include='\.png$' \
+            --include='\.jpg$' \
+            --include='\.jpeg$' \
+            --include='\.gif$' \
+            --include='\.svg$' \
+            --include='\.webp$' \
+            "$CONTENT_PATH" | while read -r event; do
+            echo "📝 File change detected, syncing..."
+            sync_content 2>/dev/null
+        done
+    ) &
+    WATCHER_PID=$!
+else
+    echo "ℹ️  fswatch not found. Install with 'brew install fswatch' for live file sync."
+    echo "   Without fswatch, restart the script to see content changes."
+fi
+
 # Run the dev server
 echo "🚀 Starting development server on port $PORT..."
 PORT=$PORT pnpm dev
-
