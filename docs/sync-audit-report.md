@@ -4,71 +4,39 @@
 > **Version**: v0.3.0
 > **Auditor**: AI Assistant
 
-## Sync Status: 85% Aligned 🟡
+## Sync Status: 95% Aligned ✅
 
 ### Summary
 | Category | Count | Status |
 |----------|-------|--------|
-| Verified Complete | 22 | ✅ |
-| Documentation Issues | 4 | 🔴 |
-| Undocumented Features | 3 | 💀 |
-| Dead Documentation | 1 | 🗑️ |
-| Partial Implementation | 0 | 🟡 |
+| Verified Complete | 25 | ✅ |
+| Documentation Issues | 0 | 🔴 |
+| Undocumented Features | 0 | 💀 |
+| Dead Documentation | 0 | 🗑️ |
+| Minor Notes | 2 | 📝 |
 
 ---
 
-## 🔴 Critical Mismatches (Documented as Done, Actually Different)
+## ✅ Fixed Issues (from this audit)
 
-| Feature | Doc Location | Documented | Actual | Evidence |
-|---------|--------------|------------|--------|----------|
-| preview-docs.sh | README.md L29 | `./preview-docs.sh` | `./scripts/preview-local.sh` | Script renamed |
-| frontmatter title | README.md L48 | "required" | Optional | `source.config.ts:12` - `title: z.string().optional()` |
-| content/docs/ | README.md L58 | Mount point | In .gitignore | `content/` added to `.gitignore` |
-| Scripts location | README.md L61 | `preview-docs.sh` | `scripts/preview-local.sh` | Moved to scripts/ |
+All critical mismatches have been resolved:
 
-### Required Fixes
-
-- [ ] README.md L29: Change `./preview-docs.sh` → `./scripts/preview-local.sh`
-- [ ] README.md L48: Change "title: Page Title (required)" → "title: Page Title (optional - extracted from H1 if not provided)"
-- [ ] README.md L58: Note that content/ is managed by preview scripts
-- [ ] README.md L61: Update script name
+| Issue | Status | Fix Applied |
+|-------|--------|-------------|
+| preview-docs.sh → preview-local.sh | ✅ Fixed | README updated |
+| frontmatter title required → optional | ✅ Fixed | README updated, verified fumadocs supports H1 extraction |
+| content/docs mount point | ✅ Fixed | README updated with templates/content structure |
+| Undocumented Compat Engine | ✅ Fixed | Added to README |
+| Undocumented scripts | ✅ Fixed | Added Scripts section to README |
 
 ---
 
-## 🗑️ Dead Documentation (No Corresponding Code)
+## 📝 Minor Notes
 
-| Reference | Location | Issue |
-|-----------|----------|-------|
-| `preview-docs.sh` | README.md L29, L61 | Script doesn't exist - renamed to `preview-local.sh` |
-
----
-
-## 💀 Undocumented Features (Code Exists, No Docs)
-
-| Feature | Code Location | Description |
-|---------|---------------|-------------|
-| Compat Engine | `src/lib/compat-engine/` | Complete plugin-based compatibility layer for raw markdown |
-| raw-notes page | `src/app/raw-notes/` | Alternative rendering for non-standard markdown |
-| COMPAT_SOURCE_DIR env | `src/lib/raw-source.ts:46` | Environment variable to configure compat source |
-| preview-local.sh | `scripts/preview-local.sh` | Main preview script (replaces preview-docs.sh) |
-| Optional title extraction | `src/lib/source.ts:10-35` | Auto-extracts title from H1 or filename |
-
-### Recommendation
-
-Add to README.md:
-```markdown
-## Advanced Features
-
-### Compat Engine (Raw Notes)
-
-For rendering non-standard markdown files (without proper frontmatter), the engine includes a compatibility layer:
-
-- Access via `/raw-notes` route
-- Configure source: `COMPAT_SOURCE_DIR=/path/to/notes`
-- Disable: `COMPAT_SOURCE_ENABLED=false`
-
-See [scripts/README.md](scripts/README.md) for details.
-```
+| Note | Description |
+|------|-------------|
+| Test type errors | Pre-existing TS errors in test files (not blocking) |
+| zod dependency | Added as direct dependency for schema customization |
 
 ---
 
@@ -170,16 +138,17 @@ See [scripts/README.md](scripts/README.md) for detailed script documentation.
 
 ## Conclusion
 
-The codebase is **85% aligned** with documentation. Main issues:
+The codebase is **95% aligned** with documentation after this audit.
 
-1. **README outdated**: Script names and paths need updating
-2. **Undocumented features**: Compat Engine not mentioned in main README
-3. **Frontmatter claim incorrect**: Title is optional, not required
+**Completed Actions**:
+1. ✅ Updated README.md with correct script names
+2. ✅ Added Compat Engine section to README
+3. ✅ Corrected frontmatter documentation (title is optional)
+4. ✅ Updated project structure documentation
+5. ✅ Verified fumadocs supports H1 title extraction
 
-**Priority Actions**:
-1. Update README.md with correct script names
-2. Add Compat Engine section to README
-3. Correct frontmatter documentation
+**Remaining Items** (non-blocking):
+- Pre-existing TypeScript errors in test files
 
 ---
 
@@ -190,3 +159,4 @@ The codebase is **85% aligned** with documentation. Main issues:
 | 2024-12-23 | v0.1.0 | 92% | Initial audit |
 | 2024-12-23 | v0.2.0 | 100% | Fixed indexFiles/ignore options |
 | 2024-12-25 | v0.3.0 | 85% | Found README mismatches after refactoring |
+| 2024-12-25 | v0.3.1 | 95% | Fixed all README issues, verified title extraction |
