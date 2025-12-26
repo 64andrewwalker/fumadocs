@@ -15,7 +15,7 @@ export function Mermaid({ chart }: MermaidProps) {
 
   useEffect(() => {
     const renderChart = async () => {
-      if (!chart || !containerRef.current) return;
+      if (!chart) return;
 
       try {
         // Dynamic import to avoid SSR issues

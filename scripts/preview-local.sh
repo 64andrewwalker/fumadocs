@@ -66,6 +66,41 @@ else
     HAS_HOME="no"
 fi
 
+# Detect if content has proper frontmatter (for fumadocs-mdx) or is raw markdown (for compat-engine)
+# Check a few markdown files to see if they have YAML frontmatter
+detect_content_type() {
+    local sample_count=0
+    local frontmatter_count=0
+    
+    # Find up to 5 markdown files to sample
+    while IFS= read -r -d '' file; do
+        sample_count=$((sample_count + 1))
+        # Check if file starts with YAML frontmatter (---)
+        if head -n 1 "$file" | grep -q "^---$"; then
+            frontmatter_count=$((frontmatter_count + 1))
+        fi
+        [ $sample_count -ge 5 ] && break
+    done < <(find "$DOCS_PATH" -name "*.md" -o -name "*.mdx" 2>/dev/null | head -5 | tr '\n' '\0')
+    
+    # If less than half have frontmatter, treat as raw markdown
+    if [ $sample_count -gt 0 ] && [ $frontmatter_count -lt $((sample_count / 2 + 1)) ]; then
+        echo "raw"
+    else
+        echo "structured"
+    fi
+}
+
+CONTENT_TYPE=$(detect_content_type)
+
+# If raw mode, we'll use compat-engine instead of fumadocs-mdx
+if [ "$CONTENT_TYPE" = "raw" ]; then
+    RAW_MODE="yes"
+    # Export the source path for compat-engine
+    export COMPAT_SOURCE_DIR="$CONTENT_PATH"
+else
+    RAW_MODE="no"
+fi
+
 # Function to check if port is available
 is_port_available() {
     ! lsof -i ":$1" >/dev/null 2>&1
@@ -105,6 +140,18 @@ echo "🌐 Server:    http://localhost:$PORT"
 if [ "$PORT" != "$PREFERRED_PORT" ]; then
     echo "ℹ️  Port $PREFERRED_PORT was busy, using $PORT instead"
 fi
+if [ "$RAW_MODE" = "yes" ]; then
+    echo ""
+    echo "📝 Mode:      RAW MARKDOWN (compat-engine)"
+    echo "🔗 Browse:    http://localhost:$PORT/raw-notes"
+    echo ""
+    echo "   ℹ️  Detected raw markdown files (no YAML frontmatter)."
+    echo "   ℹ️  Using compat-engine for flexible rendering."
+else
+    echo ""
+    echo "📝 Mode:      STRUCTURED DOCS (fumadocs-mdx)"
+    echo "🔗 Browse:    http://localhost:$PORT/docs"
+fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
@@ -121,6 +168,35 @@ fi
 # Function to sync content (copy files)
 sync_content() {
     echo "📋 Syncing content from source..."
+    
+    # In raw mode, compat-engine reads directly from source
+    # We only need a minimal content/docs for fumadocs-mdx to not fail
+    if [ "$RAW_MODE" = "yes" ]; then
+        mkdir -p "$CONTENT_DIR/docs"
+        # Create a placeholder so fumadocs-mdx has something to build
+        # The actual content is served via /raw-notes using compat-engine
+        if [ ! -f "$CONTENT_DIR/docs/index.mdx" ]; then
+            cat > "$CONTENT_DIR/docs/index.mdx" << 'EOF'
+---
+title: Documentation
+description: Welcome to the documentation
+---
+
+# Documentation
+
+This content is served via the **Raw Notes** route.
+
+→ **[Browse Raw Notes](/raw-notes)** to view your markdown files.
+
+---
+
+The compat-engine is handling your raw markdown files without requiring YAML frontmatter.
+EOF
+            echo "📄 Created placeholder for /docs"
+        fi
+        echo "📁 Raw mode: compat-engine reading from $CONTENT_PATH"
+        return
+    fi
     
     if [ "$MOUNT_MODE" = "full" ]; then
         # Full mode: copy entire content directory
@@ -248,4 +324,9 @@ fi
 
 # Run the dev server
 echo "🚀 Starting development server on port $PORT..."
-PORT=$PORT pnpm dev
+if [ "$RAW_MODE" = "yes" ]; then
+    # In raw mode, pass COMPAT_SOURCE_DIR so compat-engine can find the source
+    PORT=$PORT COMPAT_SOURCE_DIR="$CONTENT_PATH" pnpm dev
+else
+    PORT=$PORT pnpm dev
+fi
