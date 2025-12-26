@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { join } from 'path'
 import { compileMDX } from 'next-mdx-remote/rsc';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { source } from '@/lib/source';
+import { getRawSource } from '@/lib/raw-source';
 
 // Custom components available in homepage MDX
 const customComponents = {
@@ -49,7 +50,7 @@ const customComponents = {
   Feature: ({ icon, image, title, description }: { icon?: string; image?: string; title: string; description: string }) => {
     // Get basePath from environment (set during build for GitHub Pages)
     const basePath = process.env.NEXT_BASE_PATH || '';
-    
+
     // Resolve image path with basePath support
     const getImageSrc = (src: string) => {
       if (!src) return '';
@@ -60,7 +61,7 @@ const customComponents = {
       // For relative paths, assume /images/ prefix
       return `${basePath}/images/${src}`;
     };
-    
+
     return (
       <div className="p-6 rounded-xl bg-fd-card border border-fd-border hover:border-fd-primary/50 transition-colors">
         {image && (
@@ -88,7 +89,7 @@ const customComponents = {
       if (imgSrc.startsWith('/')) return `${basePath}${imgSrc}`;
       return `${basePath}/docs/images/${imgSrc}`;
     };
-    
+
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -149,10 +150,35 @@ export default async function HomePage() {
   // Check for custom homepage MDX (in content/, NOT content/docs/ to avoid fumadocs processing)
   const homepagePath = join(process.cwd(), 'content/_home.mdx');
 
-  // Find the first available documentation page
-  const pages = source.getPages();
-  const firstPage = pages[0];
-  const firstDocUrl = firstPage?.url || '/docs';
+  // Determine the primary content source
+  // Priority: raw-notes (if has pages) > docs
+  let firstDocUrl = '/docs';
+
+  // Check raw-notes first (for raw markdown mode)
+  try {
+    const rawSource = await getRawSource();
+    const rawPages = rawSource.getPages();
+    if (rawPages.length > 0) {
+      // Use raw-notes as primary source
+      firstDocUrl = rawPages[0]?.url || '/raw-notes';
+    } else {
+      // Fall back to docs
+      const docsPages = source.getPages();
+      if (docsPages.length > 0) {
+        firstDocUrl = docsPages[0]?.url || '/docs';
+      }
+    }
+  } catch {
+    // If raw source fails, try docs
+    try {
+      const docsPages = source.getPages();
+      if (docsPages.length > 0) {
+        firstDocUrl = docsPages[0]?.url || '/docs';
+      }
+    } catch {
+      // Both failed, use default
+    }
+  }
 
   let mdxSource: string;
 
