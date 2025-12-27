@@ -113,6 +113,21 @@ const customComponents = {
   Center: ({ children }: { children: React.ReactNode }) => (
     <div className="flex flex-col items-center text-center">{children}</div>
   ),
+  // Platform item for platform showcase
+  Platform: ({ logo, name, status }: { logo: string; name: string; status: string }) => (
+    <div className="text-center">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logo} alt={name} className="w-12 h-12 mx-auto mb-2 rounded-lg object-contain" />
+      <div className="font-medium">{name}</div>
+      <div className="text-xs text-fd-muted-foreground">{status}</div>
+    </div>
+  ),
+  // Platforms container grid
+  Platforms: ({ children }: { children: React.ReactNode }) => (
+    <div className="flex flex-wrap justify-center gap-8 md:gap-12">
+      {children}
+    </div>
+  ),
   // GitHub button with icon
   GitHubButton: ({ href }: { href: string }) => (
     <a
