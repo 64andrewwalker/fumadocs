@@ -49,13 +49,13 @@ export function createIndexFileChecker(indexFiles: string[]): (fileName: string)
 export function filePathToSlugs(filePath: string): string[] {
   // Handle empty path
   if (!filePath) return [];
-  
+
   // Remove extension
   const withoutExt = filePath.replace(/\.(md|mdx)$/i, '');
-  
+
   // Split by path separators (both / and \)
   const parts = withoutExt.split(/[/\\]/).filter(Boolean);
-  
+
   // Get the original filename for index file check
   const fileName = filePath.split(/[/\\]/).pop() || '';
 

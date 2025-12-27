@@ -2,13 +2,19 @@
  * Search API Route
  * 
  * 为 fumadocs 提供搜索功能，支持 docs 和 raw-notes 两个源
+ * 
+ * Note: For static export (output: 'export'), we use staticGET instead of GET.
+ * This pre-generates the search index at build time.
  */
 
 import { source } from '@/lib/source';
 import { getRawSource } from '@/lib/raw-source';
 import { createSearchAPI, type AdvancedIndex } from 'fumadocs-core/search/server';
 
-export const { GET } = createSearchAPI('advanced', {
+// Required for static export (GitHub Pages)
+export const revalidate = false;
+
+const searchAPI = createSearchAPI('advanced', {
     // Support Chinese with english tokenizer as fallback
     language: 'english',
     indexes: async (): Promise<AdvancedIndex[]> => {
@@ -62,3 +68,7 @@ export const { GET } = createSearchAPI('advanced', {
         return indexes;
     },
 });
+
+// Use staticGET for static export compatibility (GitHub Pages)
+// Use regular GET for dynamic/standalone mode (Docker)
+export const { staticGET: GET } = searchAPI;
